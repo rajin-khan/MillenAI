@@ -4,7 +4,6 @@ import MainContent from './components/MainContent';
 import SettingsModal from './components/SettingsModal';
 import { useAuth } from './context/AuthContext';
 
-// The models array is now defined here, as App controls the selected model
 const models = [
   { id: 1, name: 'llama-3.1-8b-instant', contextWindow: 131072 },
   { id: 2, name: 'llama-3.3-70b-versatile', contextWindow: 32768 },
@@ -15,13 +14,16 @@ const models = [
 const App = () => {
   const { user, loading } = useAuth();
   const [activeChatId, setActiveChatId] = useState(null);
-  const [selectedModel, setSelectedModel] = useState(models[0].name); // LIFTED STATE
+  const [selectedModel, setSelectedModel] = useState(models[0].name);
   
   const [settings, setSettings] = useState(() => {
     const savedSettings = localStorage.getItem('millenai_settings');
     return savedSettings ? JSON.parse(savedSettings) : { apiKey: '', enterToSend: true, darkMode: true };
   });
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  
+  // --- NEW STATE FOR MOBILE SIDEBAR ---
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   useEffect(() => {
     localStorage.setItem('millenai_settings', JSON.stringify(settings));
@@ -42,20 +44,24 @@ const App = () => {
   }
 
   return (
-    <main className="relative flex w-full h-screen font-sans bg-[#0D1117] overflow-hidden">
+    // The main container now has a max-height to prevent weird mobile browser scroll issues
+    <main className="relative flex w-full h-screen max-h-screen font-sans bg-[#0D1117] overflow-hidden">
       <Sidebar 
+        isOpen={isSidebarOpen} // Pass state down
+        onClose={() => setIsSidebarOpen(false)} // Pass setter down
         activeChatId={activeChatId} 
         setActiveChatId={setActiveChatId}
         onOpenSettings={() => setIsSettingsOpen(true)}
       />
       <MainContent 
         key={activeChatId || 'welcome-screen'}
+        onToggleSidebar={() => setIsSidebarOpen(true)} // Pass toggle function
         activeChatId={activeChatId} 
         setActiveChatId={setActiveChatId} 
         settings={settings}
-        models={models} // Pass models down
-        selectedModel={selectedModel} // Pass selectedModel state down
-        setSelectedModel={setSelectedModel} // Pass setter function down
+        models={models}
+        selectedModel={selectedModel}
+        setSelectedModel={setSelectedModel}
       />
       <SettingsModal
         isOpen={isSettingsOpen}
