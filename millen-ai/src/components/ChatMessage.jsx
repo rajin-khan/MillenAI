@@ -1,9 +1,14 @@
 import { motion } from 'framer-motion';
 import { UserCircleIcon } from '@heroicons/react/24/solid';
 
-const ChatMessage = ({ message }) => {
+const BlinkingCursor = () => (
+  <span className="inline-block w-2 h-5 ml-1 bg-white animate-pulse" />
+);
+
+const ChatMessage = ({ message, isLoading }) => {
   const { role, content } = message;
   const isUser = role === 'user';
+  const isAssistant = role === 'assistant';
 
   return (
     <motion.div
@@ -19,7 +24,10 @@ const ChatMessage = ({ message }) => {
       )}
       <div className="flex flex-col flex-1">
         <span className="font-bold text-white">{isUser ? 'You' : 'MillenAI'}</span>
-        <p className="text-zinc-200 whitespace-pre-wrap">{content}</p>
+        <p className="text-zinc-200 whitespace-pre-wrap">
+          {content}
+          {isAssistant && isLoading && <BlinkingCursor />}
+        </p>
       </div>
     </motion.div>
   );
