@@ -8,6 +8,7 @@ const ChatInput = ({ input, setInput, handleSendMessage, isLoading, placeholder,
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => {
+            // "Enter to Send" logic is now active
             if (enterToSend && e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault();
               handleSendMessage();
@@ -18,7 +19,7 @@ const ChatInput = ({ input, setInput, handleSendMessage, isLoading, placeholder,
           rows="1"
         />
         <button
-          onClick={() => handleSendMessage()} // THE FIX: Ensures no event object is passed.
+          onClick={() => handleSendMessage()}
           disabled={isLoading || !input.trim()}
           className="absolute right-2.5 bottom-2.5 p-2.5 transition-all duration-300 ease-in-out rounded-full bg-gradient-to-r from-emerald-500 to-cyan-600 hover:from-emerald-600 hover:to-cyan-700 hover:scale-110 active:scale-100 disabled:bg-zinc-700 disabled:from-zinc-700 disabled:hover:scale-100"
         >

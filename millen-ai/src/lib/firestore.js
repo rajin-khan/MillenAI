@@ -1,5 +1,5 @@
 import { db } from './firebase';
-import { collection, addDoc, query, where, onSnapshot, orderBy, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, query, where, onSnapshot, orderBy, serverTimestamp, doc, updateDoc, deleteDoc, writeBatch, getDocs } from 'firebase/firestore';
 
 /**
  * Creates a new chat for a user.
@@ -78,4 +78,24 @@ export const updateChatTitle = async (chatId, title) => {
   await updateDoc(chatRef, {
     title: title
   });
+};
+
+/**
+ * Deletes a chat and all of its associated messages in a batch.
+ * @param {string} chatId - The ID of the chat to delete.
+ */
+export const deleteChat = async (chatId) => {
+  const chatRef = doc(db, 'chats', chatId);
+  const messagesRef = collection(db, 'chats', chatId, 'messages');
+
+  const batch = writeBatch(db);
+
+  const messagesSnapshot = await getDocs(messagesRef);
+  messagesSnapshot.forEach((doc) => {
+    batch.delete(doc.ref);
+  });
+
+  batch.delete(chatRef);
+
+  await batch.commit();
 };

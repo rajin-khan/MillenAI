@@ -4,9 +4,18 @@ import MainContent from './components/MainContent';
 import SettingsModal from './components/SettingsModal';
 import { useAuth } from './context/AuthContext';
 
+// The models array is now defined here, as App controls the selected model
+const models = [
+  { id: 1, name: 'llama-3.1-8b-instant', contextWindow: 131072 },
+  { id: 2, name: 'llama-3.3-70b-versatile', contextWindow: 32768 },
+  { id: 3, name: 'openai/gpt-oss-120b', contextWindow: 131072 },
+  { id: 4, name: 'openai/gpt-oss-20b', contextWindow: 131072 },
+];
+
 const App = () => {
   const { user, loading } = useAuth();
   const [activeChatId, setActiveChatId] = useState(null);
+  const [selectedModel, setSelectedModel] = useState(models[0].name); // LIFTED STATE
   
   const [settings, setSettings] = useState(() => {
     const savedSettings = localStorage.getItem('millenai_settings');
@@ -18,18 +27,12 @@ const App = () => {
     localStorage.setItem('millenai_settings', JSON.stringify(settings));
   }, [settings]);
 
-  // If the user logs out, reset the active chat to show the welcome screen
   useEffect(() => {
-    if (!user) {
-      setActiveChatId(null);
-    }
+    if (!user) setActiveChatId(null);
   }, [user]);
 
-  const handleSaveSettings = (newSettings) => {
-    setSettings(newSettings);
-  };
+  const handleSaveSettings = (newSettings) => setSettings(newSettings);
 
-  // While the auth state is being determined, show a full-screen loader
   if (loading) {
     return (
       <div className="bg-[#0D1117] h-screen w-full flex items-center justify-center text-white font-bold text-2xl animate-pulse">
@@ -46,10 +49,13 @@ const App = () => {
         onOpenSettings={() => setIsSettingsOpen(true)}
       />
       <MainContent 
-        key={activeChatId || 'welcome-screen'} // CRITICAL: This forces a re-render on new chat
+        key={activeChatId || 'welcome-screen'}
         activeChatId={activeChatId} 
         setActiveChatId={setActiveChatId} 
         settings={settings}
+        models={models} // Pass models down
+        selectedModel={selectedModel} // Pass selectedModel state down
+        setSelectedModel={setSelectedModel} // Pass setter function down
       />
       <SettingsModal
         isOpen={isSettingsOpen}

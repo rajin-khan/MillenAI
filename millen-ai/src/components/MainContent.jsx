@@ -10,23 +10,17 @@ import WelcomeScreen from './WelcomeScreen';
 import ChatInput from './ChatInput';
 import ContextStatus from './ContextStatus';
 
-const models = [
-  { id: 1, name: 'llama-3.1-8b-instant', contextWindow: 131072 },
-  { id: 2, name: 'llama-3.3-70b-versatile', contextWindow: 32768 },
-  { id: 3, name: 'openai/gpt-oss-120b', contextWindow: 131072 },
-  { id: 4, name: 'openai/gpt-oss-20b', contextWindow: 131072 },
-];
-
-const MainContent = ({ activeChatId, setActiveChatId, settings }) => {
+// models are now passed down as props
+const MainContent = ({ activeChatId, setActiveChatId, settings, models, selectedModel, setSelectedModel }) => {
   const { user } = useAuth();
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
-  const [selectedModel, setSelectedModel] = useState(models[0].name);
   const [isLoading, setIsLoading] = useState(false);
   const [tokenCount, setTokenCount] = useState(0);
   const chatContainerRef = useRef(null);
 
   const currentModel = models.find(m => m.name === selectedModel) || models[0];
+  const isChatActive = activeChatId !== null;
 
   useEffect(() => {
     if (activeChatId) {
@@ -38,9 +32,7 @@ const MainContent = ({ activeChatId, setActiveChatId, settings }) => {
   }, [activeChatId]);
 
   useEffect(() => {
-    if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-    }
+    if (chatContainerRef.current) chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
   }, [messages]);
 
   useEffect(() => {
@@ -66,7 +58,6 @@ const MainContent = ({ activeChatId, setActiveChatId, settings }) => {
       const newChatId = await createNewChat(user.uid);
       setActiveChatId(newChatId);
       currentChatId = newChatId;
-      
       const newTitle = content.split(' ').slice(0, 4).join(' ');
       await updateChatTitle(newChatId, newTitle);
     }
@@ -87,9 +78,13 @@ const MainContent = ({ activeChatId, setActiveChatId, settings }) => {
         const contentDelta = chunk.choices[0]?.delta?.content || '';
         if (contentDelta) {
           fullResponse += contentDelta;
-          setMessages(prev => prev.map(msg => 
-            msg.id === assistantMessageId ? { ...msg, content: fullResponse } : msg
-          ));
+          // **THE PERFECTED STREAMING LOGIC**
+          setMessages(prev => {
+            const newMessages = prev.slice(0, -1);
+            const lastMessage = prev[prev.length - 1];
+            const updatedLastMessage = { ...lastMessage, content: fullResponse };
+            return [...newMessages, updatedLastMessage];
+          });
         }
       }
       
@@ -107,35 +102,35 @@ const MainContent = ({ activeChatId, setActiveChatId, settings }) => {
   return (
     <div className="flex flex-col flex-1 h-screen relative">
       <AnimatePresence>
-        {activeChatId ? (
-          <motion.header key="chat-header" initial={{ opacity: 0}} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-shrink-0 z-10 bg-[#0D1117]/80 backdrop-blur-lg border-b border-white/10">
-            <div className="max-w-3xl mx-auto p-4 flex items-center justify-between gap-4">
-              <ModelSelector models={models} selectedModel={selectedModel} onModelChange={setSelectedModel} />
-              <ContextStatus currentTokens={tokenCount} maxTokens={currentModel.contextWindow} modelName={currentModel.name} />
-            </div>
+        {isChatActive ? (
+          <motion.header key="chat-header" initial={{ y: -80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -80, opacity: 0 }} transition={{ duration: 0.3, ease: 'easeInOut' }} className="flex-shrink-0 z-10 bg-[#0D1117]/80 backdrop-blur-lg border-b border-white/10">
+            <div className="max-w-3xl mx-auto p-4"><div className="flex items-center justify-between gap-4"><ModelSelector models={models} selectedModel={selectedModel} onModelChange={setSelectedModel} /><ContextStatus currentTokens={tokenCount} maxTokens={currentModel.contextWindow} modelName={currentModel.name} /></div></div>
           </motion.header>
-        ) : null}
+        ) : (
+          <motion.div key="welcome-selector" initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -20, opacity: 0 }} transition={{ duration: 0.3, ease: 'easeInOut' }} className="absolute top-6 left-1/2 -translate-x-1/2 z-10">
+             <ModelSelector models={models} selectedModel={selectedModel} onModelChange={setSelectedModel} />
+          </motion.div>
+        )}
       </AnimatePresence>
 
       <div ref={chatContainerRef} className="flex-grow p-6 overflow-y-auto scroll-smooth">
-        {!activeChatId ? (
-          <div className="h-full flex flex-col items-center justify-center">
-            <WelcomeScreen onSuggestionClick={handleSendMessage} />
-          </div>
+        {isChatActive ? (
+          <motion.div key="chat-view" className="max-w-3xl mx-auto pt-8">{messages.map((msg, index) => <ChatMessage key={msg.id || index} message={msg} isLoading={isLoading && index === messages.length - 1 && !msg.id} />)}</motion.div>
         ) : (
-          <div className="max-w-3xl mx-auto">
-            {messages.map((msg, index) => <ChatMessage key={msg.id || index} message={msg} isLoading={isLoading && index === messages.length - 1 && !msg.id} />)}
-          </div>
+          <div key="welcome-view" className="h-full flex items-center justify-center"><WelcomeScreen onSuggestionClick={handleSendMessage} /></div>
         )}
       </div>
       
-      {!(activeChatId && messages.length === 0 && isLoading) &&
-        <div className={`flex-shrink-0 px-6 pb-6 w-full ${!activeChatId ? 'absolute bottom-10 left-0 right-0' : 'relative'}`}>
-          <div className="max-w-3xl mx-auto">
-            <ChatInput input={input} setInput={setInput} handleSendMessage={handleSendMessage} isLoading={isLoading} placeholder={`Message ${selectedModel}...`} />
-          </div>
-        </div>
-      }
+      <motion.div layout transition={{ duration: 0.5, type: 'spring', bounce: 0.2 }} className={`w-full max-w-3xl px-6 pb-6 ${isChatActive ? 'relative mx-auto' : 'absolute bottom-10 left-1/2 -translate-x-1/2'}`}>
+        <ChatInput
+          input={input}
+          setInput={setInput}
+          handleSendMessage={handleSendMessage}
+          isLoading={isLoading}
+          placeholder={`Message ${selectedModel}...`}
+          enterToSend={settings.enterToSend}
+        />
+      </motion.div>
     </div>
   );
 };
