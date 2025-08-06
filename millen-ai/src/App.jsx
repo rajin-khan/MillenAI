@@ -3,12 +3,12 @@ import MainContent from './components/MainContent';
 
 function App() {
   return (
-    // Add a subtle, dark gradient to the entire background
-    <main className="flex w-full h-screen font-sans bg-gradient-to-br from-zinc-950 to-slate-900">
+    // Set the dark, solid background from the image
+    <main className="flex w-full h-screen font-sans bg-[#0D1117]">
       <Sidebar />
       <MainContent />
     </main>
   )
 }
 
-export default App
+export default App;
