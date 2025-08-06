@@ -1,67 +1,28 @@
-import Groq from 'groq-sdk';
-
 /**
- * Creates a standard Groq client instance.
- * @param {string} apiKey - The user's Groq API key.
- * @returns {Groq} A Groq client instance.
- */
-const createGroqClient = (apiKey) => {
-  return new Groq({
-    apiKey: apiKey,
-    dangerouslyAllowBrowser: true,
-  });
-};
-
-/**
- * API call logic for llama-3.1-8b-instant that returns a stream.
- * @param {string} apiKey - The user's Groq API key.
- * @param {Array<object>} messages - The conversation history.
- * @returns {Promise<Stream>} A stream object from the Groq SDK.
- */
-async function streamLlama3_1_8b_instant(apiKey, messages) {
-  const groq = createGroqClient(apiKey);
-  return groq.chat.completions.create({
-    model: "llama-3.1-8b-instant",
-    messages: messages,
-    stream: true,
-  });
-}
-
-/**
- * API call logic for llama-3.3-70b-versatile that returns a stream.
- * @param {string} apiKey - The user's Groq API key.
- * @param {Array<object>} messages - The conversation history.
- * @returns {Promise<Stream>} A stream object from the Groq SDK.
- */
-async function streamLlama3_3_70b_versatile(apiKey, messages) {
-  const groq = createGroqClient(apiKey);
-  return groq.chat.completions.create({
-    model: "llama-3.3-70b-versatile",
-    messages: messages,
-    stream: true,
-  });
-}
-
-/**
- * The main API dispatcher. Selects the correct streaming function.
- * @param {string} modelName - The identifier for the selected model.
+ * The main API dispatcher. Sends a payload to our secure serverless function
+ * and awaits a complete JSON response.
  * @param {string} apiKey - The user's API key.
- * @param {Array<object>} messages - The conversation history.
- * @returns {Promise<Stream>} The AI's response as a stream.
+ * @param {object} payload - The complete request object for the Groq API.
+ * @returns {Promise<object>} The full completion object from the Groq API.
  */
-export async function getGroqCompletionStream(modelName, apiKey, messages) {
-  switch (modelName) {
-    case 'llama-3.1-8b-instant':
-      return streamLlama3_1_8b_instant(apiKey, messages);
+export async function getGroqCompletion(apiKey, payload) {
+  const response = await fetch('/api/groq', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      apiKey: apiKey,
+      payload: payload,
+    }),
+  });
 
-    case 'llama-3.3-70b-versatile':
-      return streamLlama3_3_70b_versatile(apiKey, messages);
-
-    case 'openai/gpt-oss-120b':
-    case 'openai/gpt-oss-20b':
-      throw new Error(`The model "${modelName}" is not yet implemented.`);
-      
-    default:
-      throw new Error(`Unknown or unsupported model selected: ${modelName}`);
+  if (!response.ok) {
+    // Await the error message from the serverless function's JSON response
+    const errorData = await response.json().catch(() => ({ error: 'Failed to parse error response' }));
+    throw new Error(errorData.error || `API request failed with status ${response.status}`);
   }
+
+  // Expect and parse a single JSON object for the successful response.
+  return response.json();
 }

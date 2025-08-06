@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
-import { getGroqCompletionStream } from '../lib/groq';
+import { getGroqCompletion } from '../lib/groq'; // Renamed import to reflect non-streaming
 import { getChatMessages, addMessageToChat, createNewChat, updateChatTitle } from '../lib/firestore';
 import { countTokens } from '../lib/tokenizer';
 import ModelSelector from './ModelSelector';
@@ -10,7 +10,6 @@ import WelcomeScreen from './WelcomeScreen';
 import ChatInput from './ChatInput';
 import ContextStatus from './ContextStatus';
 
-// models are now passed down as props
 const MainContent = ({ activeChatId, setActiveChatId, settings, models, selectedModel, setSelectedModel }) => {
   const { user } = useAuth();
   const [messages, setMessages] = useState([]);
@@ -66,33 +65,52 @@ const MainContent = ({ activeChatId, setActiveChatId, settings, models, selected
     await addMessageToChat(currentChatId, userMessage);
 
     const apiRequestMessages = [...messages, userMessage].map(({ role, content }) => ({ role, content }));
-    let fullResponse = '';
+    
+    let payload;
+    switch (selectedModel) {
+      case 'llama-3.1-8b-instant':
+        payload = { model: "llama-3.1-8b-instant", messages: apiRequestMessages };
+        break;
+      case 'llama-3.3-70b-versatile':
+        payload = { model: "llama-3.3-70b-versatile", messages: apiRequestMessages };
+        break;
+      default:
+        const errorMsg = `The model "${selectedModel}" is not handled.`;
+        await addMessageToChat(currentChatId, { role: 'assistant', content: errorMsg });
+        setIsLoading(false);
+        return;
+    }
+    
+    // ========================================================================
+    // THE GUARANTEED "THINKING" STATE FIX
+    // ========================================================================
+    const placeholderId = `placeholder-${Date.now()}`;
+    // 1. Add the placeholder to the UI immediately.
+    setMessages(prev => [...prev, { id: placeholderId, role: 'assistant', content: '', isLoading: true }]);
+
+    // 2. THIS IS THE MAGIC: We wait for one "tick" of the event loop. This gives
+    // React a chance to re-render the DOM with the placeholder *before* we
+    // start the long-running network request.
+    await new Promise(resolve => setTimeout(resolve, 50));
 
     try {
-      const stream = await getGroqCompletionStream(selectedModel, settings.apiKey, apiRequestMessages);
+      // 3. Now, make the API call. The user is seeing the placeholder while this runs.
+      const completion = await getGroqCompletion(settings.apiKey, payload);
+      const fullResponse = completion.choices[0]?.message?.content || 'Sorry, I could not generate a response.';
       
-      const assistantMessageId = Date.now().toString();
-      setMessages(prev => [...prev, userMessage, { id: assistantMessageId, role: 'assistant', content: '' }]);
-
-      for await (const chunk of stream) {
-        const contentDelta = chunk.choices[0]?.delta?.content || '';
-        if (contentDelta) {
-          fullResponse += contentDelta;
-          // **THE PERFECTED STREAMING LOGIC**
-          setMessages(prev => {
-            const newMessages = prev.slice(0, -1);
-            const lastMessage = prev[prev.length - 1];
-            const updatedLastMessage = { ...lastMessage, content: fullResponse };
-            return [...newMessages, updatedLastMessage];
-          });
-        }
-      }
+      // 4. Update the placeholder with the final response.
+      setMessages(prev => prev.map(msg => 
+        msg.id === placeholderId ? { ...msg, content: fullResponse, isLoading: false } : msg
+      ));
       
       await addMessageToChat(currentChatId, { role: 'assistant', content: fullResponse });
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-      console.error(`API call for model ${selectedModel} failed:`, error);
+      console.error(`API call failed:`, error);
+      setMessages(prev => prev.map(msg => 
+        msg.id === placeholderId ? { ...msg, content: `An error occurred: ${errorMessage}`, isLoading: false } : msg
+      ));
       await addMessageToChat(currentChatId, { role: 'assistant', content: `An error occurred: ${errorMessage}` });
     } finally {
       setIsLoading(false);
@@ -115,7 +133,7 @@ const MainContent = ({ activeChatId, setActiveChatId, settings, models, selected
 
       <div ref={chatContainerRef} className="flex-grow p-6 overflow-y-auto scroll-smooth">
         {isChatActive ? (
-          <motion.div key="chat-view" className="max-w-3xl mx-auto pt-8">{messages.map((msg, index) => <ChatMessage key={msg.id || index} message={msg} isLoading={isLoading && index === messages.length - 1 && !msg.id} />)}</motion.div>
+          <motion.div key="chat-view" className="max-w-3xl mx-auto pt-8">{messages.map((msg, index) => <ChatMessage key={msg.id || index} message={msg} />)}</motion.div>
         ) : (
           <div key="welcome-view" className="h-full flex items-center justify-center"><WelcomeScreen onSuggestionClick={handleSendMessage} /></div>
         )}
