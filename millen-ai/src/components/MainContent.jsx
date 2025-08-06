@@ -1,16 +1,19 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getGroqCompletionStream } from '../lib/api';
+import { countTokens } from '../lib/tokenizer'; // Import our new token counter
 import ModelSelector from './ModelSelector';
 import ChatMessage from './ChatMessage';
 import WelcomeScreen from './WelcomeScreen';
 import ChatInput from './ChatInput';
+import ContextStatus from './ContextStatus'; // Import the new progress bar component
 
+// Add the contextWindow property to each model
 const models = [
-  { id: 1, name: 'llama-3.1-8b-instant' },
-  { id: 2, name: 'llama-3.3-70b-versatile' },
-  { id: 3, name: 'openai/gpt-oss-120b' },
-  { id: 4, name: 'openai/gpt-oss-20b' },
+  { id: 1, name: 'llama-3.1-8b-instant', contextWindow: 131072 },
+  { id: 2, name: 'llama-3.3-70b-versatile', contextWindow: 32768 },
+  { id: 3, name: 'openai/gpt-oss-120b', contextWindow: 131072 },
+  { id: 4, name: 'openai/gpt-oss-20b', contextWindow: 131072 },
 ];
 
 const MainContent = ({ settings }) => {
@@ -18,20 +21,30 @@ const MainContent = ({ settings }) => {
   const [input, setInput] = useState('');
   const [selectedModel, setSelectedModel] = useState(models[0].name);
   const [isLoading, setIsLoading] = useState(false);
+  const [tokenCount, setTokenCount] = useState(0); // New state for token count
   const chatContainerRef = useRef(null);
 
+  // Find the full model object based on the selected name
+  const currentModel = models.find(m => m.name === selectedModel) || models[0];
+
+  // Effect for auto-scrolling
   useEffect(() => {
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, tokenCount]); // Also trigger on tokenCount for good measure
+
+  // Effect for dynamically counting tokens
+  useEffect(() => {
+    const totalTokens = countTokens(messages);
+    setTokenCount(totalTokens);
+  }, [messages]); // This runs every time the conversation changes
 
   const isChatActive = messages.length > 0;
 
   const handleSendMessage = async (messageContent) => {
     const content = typeof messageContent === 'string' ? messageContent : input;
     if (!content.trim() || isLoading) return;
-
     if (!settings.apiKey) {
       alert("Please set your Groq API key in the settings first.");
       return;
@@ -46,30 +59,15 @@ const MainContent = ({ settings }) => {
 
     try {
       const stream = await getGroqCompletionStream(selectedModel, settings.apiKey, apiRequestMessages);
-
       for await (const chunk of stream) {
         const contentDelta = chunk.choices[0]?.delta?.content || '';
         if (contentDelta) {
-          // =================== THE FIX IS HERE ===================
-          // We must create a completely new array and a new last message object
-          // to ensure the state update is immutable and works with React's StrictMode.
           setMessages(prev => {
-            // Get all messages except the last one
             const newMessages = prev.slice(0, -1);
-            
-            // Get the last message object from the previous state
             const lastMessage = prev[prev.length - 1];
-            
-            // Create a brand new object for the last message
-            const updatedLastMessage = {
-              ...lastMessage,
-              content: lastMessage.content + contentDelta, // Append the new chunk
-            };
-
-            // Return the new array
+            const updatedLastMessage = { ...lastMessage, content: lastMessage.content + contentDelta };
             return [...newMessages, updatedLastMessage];
           });
-          // ================= END OF THE FIX ==================
         }
       }
     } catch (error) {
@@ -87,15 +85,23 @@ const MainContent = ({ settings }) => {
 
   return (
     <div className="flex flex-col flex-1 h-screen relative">
-      <div className="absolute top-4 left-6 z-10">
+      <div className="absolute top-4 left-6 z-10 flex items-center gap-4">
         <ModelSelector
           selectedModel={selectedModel}
           onModelChange={setSelectedModel}
           models={models}
         />
+        {/* Conditionally render the context bar only when a chat is active */}
+        {isChatActive && (
+          <ContextStatus 
+            currentTokens={tokenCount}
+            maxTokens={currentModel.contextWindow}
+            modelName={currentModel.name}
+          />
+        )}
       </div>
 
-      <div ref={chatContainerRef} className="flex-grow p-6 overflow-y-auto scroll-smooth">
+      <div ref={chatContainerRef} className="flex-grow p-6 pt-20 overflow-y-auto scroll-smooth">
         <AnimatePresence>
           {!isChatActive ? (
             <WelcomeScreen key="welcome" onSuggestionClick={handleSendMessage} />
@@ -123,10 +129,7 @@ const MainContent = ({ settings }) => {
         layout
         transition={{ duration: 0.5, type: 'spring', bounce: 0.2 }}
         className={`flex-shrink-0 px-6 pb-6 w-full
-          ${isChatActive
-            ? 'relative'
-            : 'absolute bottom-10 left-1/2 -translate-x-1/2' 
-          }`
+          ${isChatActive ? 'relative' : 'absolute bottom-10 left-1/2 -translate-x-1/2'}`
         }
       >
         <div className="max-w-3xl mx-auto">

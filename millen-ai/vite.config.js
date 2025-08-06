@@ -1,11 +1,13 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import tailwindcss from '@tailwindcss/vite' // <-- Import the plugin
+import tailwindcss from '@tailwindcss/vite'
+import wasm from 'vite-plugin-wasm' // <-- 1. Import the WASM plugin
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
     react(),
-    tailwindcss(), // <-- Add the plugin
+    tailwindcss(),
+    wasm(), // <-- 2. Add the WASM plugin here
   ],
 })
