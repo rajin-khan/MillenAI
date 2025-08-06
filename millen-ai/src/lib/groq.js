@@ -23,7 +23,7 @@ async function streamLlama3_1_8b_instant(apiKey, messages) {
   return groq.chat.completions.create({
     model: "llama-3.1-8b-instant",
     messages: messages,
-    stream: true, // Enable streaming
+    stream: true,
   });
 }
 
@@ -38,7 +38,7 @@ async function streamLlama3_3_70b_versatile(apiKey, messages) {
   return groq.chat.completions.create({
     model: "llama-3.3-70b-versatile",
     messages: messages,
-    stream: true, // Enable streaming
+    stream: true,
   });
 }
 
@@ -50,7 +50,6 @@ async function streamLlama3_3_70b_versatile(apiKey, messages) {
  * @returns {Promise<Stream>} The AI's response as a stream.
  */
 export async function getGroqCompletionStream(modelName, apiKey, messages) {
-  console.log(`Dispatching streaming API call for model: ${modelName}`);
   switch (modelName) {
     case 'llama-3.1-8b-instant':
       return streamLlama3_1_8b_instant(apiKey, messages);
@@ -60,7 +59,7 @@ export async function getGroqCompletionStream(modelName, apiKey, messages) {
 
     case 'openai/gpt-oss-120b':
     case 'openai/gpt-oss-20b':
-      throw new Error(`The model "${modelName}" is not yet implemented for streaming.`);
+      throw new Error(`The model "${modelName}" is not yet implemented.`);
       
     default:
       throw new Error(`Unknown or unsupported model selected: ${modelName}`);
