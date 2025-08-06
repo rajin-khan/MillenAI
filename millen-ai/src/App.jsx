@@ -21,8 +21,6 @@ const App = () => {
     return savedSettings ? JSON.parse(savedSettings) : { apiKey: '', enterToSend: true, darkMode: true };
   });
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  
-  // --- NEW STATE FOR MOBILE SIDEBAR ---
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   useEffect(() => {
@@ -44,18 +42,17 @@ const App = () => {
   }
 
   return (
-    // The main container now has a max-height to prevent weird mobile browser scroll issues
-    <main className="relative flex w-full h-screen max-h-screen font-sans bg-[#0D1117] overflow-hidden">
+    <main className="relative flex w-full h-dvh font-sans bg-[#0D1117] overflow-hidden">
       <Sidebar 
-        isOpen={isSidebarOpen} // Pass state down
-        onClose={() => setIsSidebarOpen(false)} // Pass setter down
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
         activeChatId={activeChatId} 
         setActiveChatId={setActiveChatId}
         onOpenSettings={() => setIsSettingsOpen(true)}
       />
       <MainContent 
         key={activeChatId || 'welcome-screen'}
-        onToggleSidebar={() => setIsSidebarOpen(true)} // Pass toggle function
+        onToggleSidebar={() => setIsSidebarOpen(true)}
         activeChatId={activeChatId} 
         setActiveChatId={setActiveChatId} 
         settings={settings}

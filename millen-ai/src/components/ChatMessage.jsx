@@ -6,10 +6,8 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { dracula } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { useState } from 'react';
 
-// A new, beautiful placeholder component
 const LoadingPlaceholder = () => {
   const phrases = ["Thinking...", "Generating response...", "Processing...", "Consulting the digital oracles..."];
-  // Pick a random phrase for a bit of personality
   const [phrase] = useState(phrases[Math.floor(Math.random() * phrases.length)]);
 
   return (
@@ -23,7 +21,7 @@ const LoadingPlaceholder = () => {
 };
 
 const ChatMessage = ({ message }) => {
-  const { role, content, isLoading } = message; // Check for isLoading on the message
+  const { role, content, isLoading } = message;
   const isUser = role === 'user';
   
   const codeBlockStyle = {
@@ -70,16 +68,16 @@ const ChatMessage = ({ message }) => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: [0.25, 1, 0.5, 1] }}
-      className={`flex gap-4 p-4 my-2 rounded-xl transition-shadow duration-300 ${isUser ? 'bg-zinc-800/50' : ''} hover:bg-zinc-800/30`}
+      className={`flex gap-3 sm:gap-4 p-3 sm:p-4 my-2 rounded-xl transition-shadow duration-300 ${isUser ? 'bg-zinc-800/50' : ''} hover:bg-zinc-800/30`}
     >
       {isUser ? (
-        <UserCircleIcon className="w-8 h-8 flex-shrink-0 text-zinc-400" />
+        <UserCircleIcon className="w-7 h-7 sm:w-8 sm:h-8 flex-shrink-0 text-zinc-400" />
       ) : (
-        <div className="w-8 h-8 flex-shrink-0 rounded-full bg-gradient-to-r from-emerald-500 to-cyan-600" />
+        <div className="w-7 h-7 sm:w-8 sm:h-8 flex-shrink-0 rounded-full bg-gradient-to-r from-emerald-500 to-cyan-600" />
       )}
       <div className="flex flex-col flex-1 overflow-x-auto">
-        <span className="font-bold text-white">{isUser ? 'You' : 'MillenAI'}</span>
-        <div className="prose prose-invert max-w-none text-zinc-200">
+        <span className="font-bold text-white text-sm sm:text-base">{isUser ? 'You' : 'MillenAI'}</span>
+        <div className="prose prose-sm sm:prose-base prose-invert max-w-none text-zinc-200">
           {isLoading ? (
             <LoadingPlaceholder />
           ) : (
