@@ -3,7 +3,7 @@ import { UserCircleIcon } from '@heroicons/react/24/solid';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { dracula } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 const BlinkingCursor = () => (
   <span className="inline-block w-2 h-5 ml-1 bg-white animate-pulse" />
@@ -13,6 +13,13 @@ const ChatMessage = ({ message, isLoading }) => {
   const { role, content } = message;
   const isUser = role === 'user';
   const isAssistant = role === 'assistant';
+
+  const codeBlockStyle = {
+    padding: '1rem',
+    margin: '0',
+    fontSize: '14px',
+    lineHeight: '1.5',
+  };
 
   // Custom components for rendering Markdown elements with Tailwind CSS
   const markdownComponents = {
@@ -37,13 +44,18 @@ const ChatMessage = ({ message, isLoading }) => {
     hr: ({node, ...props}) => <hr className="my-4 border-zinc-700" {...props} />,
     // Paragraphs
     p: ({node, ...props}) => <p className="mb-2" {...props} />,
+    
+    // **NEWLY ADDED IMAGE STYLING**
+    img: ({node, ...props}) => <img className="max-w-full my-4 rounded-lg border border-zinc-700 inline-block" {...props} />,
+
     // Code blocks and inline code
     code({node, inline, className, children, ...props}) {
       const match = /language-(\w+)/.exec(className || '');
       return !inline && match ? (
-        <div className="my-2">
+        <div className="my-2 rounded-lg overflow-hidden border border-zinc-700/50">
           <SyntaxHighlighter
-            style={vscDarkPlus}
+            style={dracula}
+            customStyle={codeBlockStyle}
             language={match[1]}
             PreTag="div"
             {...props}
@@ -61,10 +73,10 @@ const ChatMessage = ({ message, isLoading }) => {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, ease: 'easeOut' }}
-      className={`flex gap-4 p-4 my-2 rounded-xl ${isUser ? 'bg-zinc-800/50' : ''}`}
+      transition={{ duration: 0.4, ease: [0.25, 1, 0.5, 1] }}
+      className={`flex gap-4 p-4 my-2 rounded-xl transition-shadow duration-300 ${isUser ? 'bg-zinc-800/50' : ''} hover:bg-zinc-800/30`}
     >
       {isUser ? (
         <UserCircleIcon className="w-8 h-8 flex-shrink-0 text-zinc-400" />

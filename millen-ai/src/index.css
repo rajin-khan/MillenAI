@@ -1,2 +1,18 @@
-/* Clear out all default styles and add these three lines */
 @import "tailwindcss";
+
+@layer base {
+  body {
+    @apply bg-[#0D1117] text-zinc-200;
+  }
+}
+
+/* Add the Aurora Background Effect */
+main::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(ellipse 80% 80% at 50% -20%,rgba(37, 99, 235, 0.2),rgba(255,255,255,0));
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.8;
+}

@@ -48,7 +48,7 @@ const SettingsModal = ({ isOpen, onClose, onSave, initialSettings }) => {
               leaveFrom="opacity-100 scale-100"
               leaveTo="opacity-0 scale-95"
             >
-              <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-[#1C1C1C] border border-zinc-700 p-6 text-left align-middle shadow-xl transition-all">
+              <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-[#1C1C1C] border border-zinc-700 p-6 text-left align-middle shadow-2xl shadow-cyan-500/10 transition-all">
                 <Dialog.Title as="h3" className="text-xl font-bold leading-6 text-white flex justify-between items-center">
                   Settings
                   <button onClick={onClose} className="p-1 rounded-full hover:bg-zinc-700 transition-colors">

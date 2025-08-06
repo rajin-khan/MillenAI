@@ -2,7 +2,7 @@ import { PaperAirplaneIcon } from '@heroicons/react/24/solid';
 
 const ChatInput = ({ input, setInput, handleSendMessage, isLoading, placeholder, enterToSend }) => {
   return (
-    <div className="w-full max-w-3xl p-0.5 rounded-full bg-gradient-to-r from-emerald-500 to-cyan-500">
+    <div className={`w-full max-w-3xl p-0.5 rounded-full bg-gradient-to-r from-emerald-500 to-cyan-500 transition-all duration-500 ${!input.trim() && !isLoading ? 'animate-aurora-glow' : ''}`}>
       <div className="relative flex items-center p-1 bg-[#1C1C1C] rounded-full">
         <textarea
           value={input}

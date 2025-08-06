@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { PlusIcon, ArrowRightOnRectangleIcon, Cog6ToothIcon } from '@heroicons/react/24/outline';
-import { ChatBubbleLeftIcon } from '@heroicons/react/24/solid';
 import { useAuth } from '../context/AuthContext';
 import { signInWithGoogle, logOut } from '../lib/firebase';
 import { getUserChats, updateChatTitle, deleteChat } from '../lib/firestore';
 import ChatHistoryItem from './ChatHistoryItem';
 import ConfirmationModal from './ConfirmationModal';
+import { motion } from 'framer-motion';
 
 const Sidebar = ({ activeChatId, setActiveChatId, onOpenSettings }) => {
   const { user } = useAuth();
@@ -57,9 +57,24 @@ const Sidebar = ({ activeChatId, setActiveChatId, onOpenSettings }) => {
     return <div className="w-9 h-9 rounded-full bg-emerald-600 flex items-center justify-center font-bold text-white">{initial}</div>;
   };
 
+  const listVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.07,
+      },
+    },
+  };
+  
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 },
+  };
+
   return (
     <>
-      <div className="flex flex-col w-72 p-3 bg-[#111111] border-r border-white/5">
+      <div className="flex flex-col w-72 p-3 bg-[#111111] border-r border-white/5 z-10">
         <div className="flex-shrink-0 mb-5 text-left pl-2">
           <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-400">MillenAI</h1>
         </div>
@@ -70,18 +85,24 @@ const Sidebar = ({ activeChatId, setActiveChatId, onOpenSettings }) => {
         </button>
         
         <div className="flex-grow pr-1 -mr-2 overflow-y-auto">
-          <div className="flex flex-col gap-1">
+          <motion.div 
+            className="flex flex-col gap-1"
+            variants={listVariants}
+            initial="hidden"
+            animate="visible"
+          >
             {chats.map(chat => (
-              <ChatHistoryItem
-                key={chat.id}
-                chat={chat}
-                isActive={activeChatId === chat.id}
-                onClick={() => setActiveChatId(chat.id)}
-                onRename={handleRenameChat}
-                onDelete={openDeleteModal}
-              />
+              <motion.div key={chat.id} variants={itemVariants}>
+                <ChatHistoryItem
+                  chat={chat}
+                  isActive={activeChatId === chat.id}
+                  onClick={() => setActiveChatId(chat.id)}
+                  onRename={handleRenameChat}
+                  onDelete={openDeleteModal}
+                />
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         </div>
 
         <div className="flex-shrink-0 pt-3 mt-2 border-t border-white/10">

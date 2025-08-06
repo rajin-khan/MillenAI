@@ -42,7 +42,7 @@ const App = () => {
   }
 
   return (
-    <main className="flex w-full h-screen font-sans bg-[#0D1117]">
+    <main className="relative flex w-full h-screen font-sans bg-[#0D1117] overflow-hidden">
       <Sidebar 
         activeChatId={activeChatId} 
         setActiveChatId={setActiveChatId}
