@@ -15,7 +15,7 @@ const App = () => {
   const { user, loading } = useAuth();
   const [activeChatId, setActiveChatId] = useState(null);
   const [selectedModel, setSelectedModel] = useState(models[0].name);
-  
+  const [agenticMode, setAgenticMode] = useState(null);
   const [settings, setSettings] = useState(() => {
     const savedSettings = localStorage.getItem('millenai_settings');
     return savedSettings ? JSON.parse(savedSettings) : { apiKey: '', enterToSend: true, darkMode: true };
@@ -31,18 +31,23 @@ const App = () => {
     if (!user) setActiveChatId(null);
   }, [user]);
 
+  useEffect(() => {
+    setAgenticMode(null);
+  }, [selectedModel]);
+
   const handleSaveSettings = (newSettings) => setSettings(newSettings);
 
   if (loading) {
-    return (
-      <div className="bg-[#0D1117] h-screen w-full flex items-center justify-center text-white font-bold text-2xl animate-pulse">
-        MillenAI
-      </div>
-    );
+    return <div className="bg-[#0D1117] h-screen w-full flex items-center justify-center text-white font-bold text-2xl animate-pulse">MillenAI</div>;
   }
 
   return (
     <main className="relative flex w-full h-dvh font-sans bg-[#0D1117] overflow-hidden">
+      {/* --- THIS IS THE FIX FOR THE PULSING BACKGROUND --- */}
+      <div 
+        className="absolute inset-0 -z-10 bg-aurora bg-[length:200%_200%] animate-aurora-background" 
+      />
+      
       <Sidebar 
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
@@ -51,7 +56,6 @@ const App = () => {
         onOpenSettings={() => setIsSettingsOpen(true)}
       />
       <MainContent 
-        key={activeChatId || 'welcome-screen'}
         onToggleSidebar={() => setIsSidebarOpen(true)}
         activeChatId={activeChatId} 
         setActiveChatId={setActiveChatId} 
@@ -59,6 +63,8 @@ const App = () => {
         models={models}
         selectedModel={selectedModel}
         setSelectedModel={setSelectedModel}
+        agenticMode={agenticMode}
+        setAgenticMode={setAgenticMode}
       />
       <SettingsModal
         isOpen={isSettingsOpen}

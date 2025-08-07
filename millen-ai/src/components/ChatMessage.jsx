@@ -4,24 +4,9 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { dracula } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { useState } from 'react';
-
-const LoadingPlaceholder = () => {
-  const phrases = ["Thinking...", "Generating response...", "Processing...", "Consulting the digital oracles..."];
-  const [phrase] = useState(phrases[Math.floor(Math.random() * phrases.length)]);
-
-  return (
-    <div className="flex items-center gap-3 py-2">
-      <div className="w-2 h-2 bg-zinc-500 rounded-full animate-pulse [animation-delay:-0.3s]"></div>
-      <div className="w-2 h-2 bg-zinc-500 rounded-full animate-pulse [animation-delay:-0.15s]"></div>
-      <div className="w-2 h-2 bg-zinc-500 rounded-full animate-pulse"></div>
-      <span className="text-sm font-medium text-zinc-400">{phrase}</span>
-    </div>
-  );
-};
 
 const ChatMessage = ({ message }) => {
-  const { role, content, isLoading } = message;
+  const { role, content } = message; // No more isLoading or placeholderType
   const isUser = role === 'user';
   
   const codeBlockStyle = {
@@ -78,13 +63,10 @@ const ChatMessage = ({ message }) => {
       <div className="flex flex-col flex-1 overflow-x-auto">
         <span className="font-bold text-white text-sm sm:text-base">{isUser ? 'You' : 'MillenAI'}</span>
         <div className="prose prose-sm sm:prose-base prose-invert max-w-none text-zinc-200">
-          {isLoading ? (
-            <LoadingPlaceholder />
-          ) : (
-            <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-              {content}
-            </ReactMarkdown>
-          )}
+          {/* It now only renders the markdown, which is much cleaner */}
+          <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+            {content}
+          </ReactMarkdown>
         </div>
       </div>
     </motion.div>
