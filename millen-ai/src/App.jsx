@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import MainContent from './components/MainContent';
 import SettingsModal from './components/SettingsModal';
+import OnboardingModal from './components/OnboardingModal'; // <-- 1. Import the new modal
 import { useAuth } from './context/AuthContext';
 
 const models = [
@@ -23,6 +24,23 @@ const App = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
+  // --- 2. ADD THIS NEW STATE AND EFFECT ---
+  const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
+
+  useEffect(() => {
+    // Check localStorage only once when the app component mounts
+    const hasVisited = localStorage.getItem('millenai_has_visited');
+    if (!hasVisited) {
+      setIsOnboardingOpen(true);
+    }
+  }, []);
+
+  const handleOnboardingComplete = () => {
+    localStorage.setItem('millenai_has_visited', 'true');
+    setIsOnboardingOpen(false);
+  };
+  // --- END OF NEW LOGIC ---
+
   useEffect(() => {
     localStorage.setItem('millenai_settings', JSON.stringify(settings));
   }, [settings]);
@@ -43,10 +61,12 @@ const App = () => {
 
   return (
     <main className="relative flex w-full h-dvh font-sans bg-[#0D1117] overflow-hidden">
-      {/* --- THIS IS THE FIX FOR THE PULSING BACKGROUND --- */}
       <div 
         className="absolute inset-0 -z-10 bg-aurora bg-[length:200%_200%] animate-aurora-background" 
       />
+      
+      {/* --- 3. RENDER THE NEW MODAL --- */}
+      <OnboardingModal isOpen={isOnboardingOpen} onClose={handleOnboardingComplete} />
       
       <Sidebar 
         isOpen={isSidebarOpen}
