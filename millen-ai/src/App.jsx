@@ -5,10 +5,10 @@ import SettingsModal from './components/SettingsModal';
 import { useAuth } from './context/AuthContext';
 
 const models = [
-  { id: 1, name: 'llama-3.1-8b-instant', contextWindow: 131072 },
-  { id: 2, name: 'llama-3.3-70b-versatile', contextWindow: 32768 },
   { id: 3, name: 'openai/gpt-oss-120b', contextWindow: 131072 },
   { id: 4, name: 'openai/gpt-oss-20b', contextWindow: 131072 },
+  { id: 1, name: 'llama-3.1-8b-instant', contextWindow: 131072 },
+  { id: 2, name: 'llama-3.3-70b-versatile', contextWindow: 32768 },
 ];
 
 const App = () => {
