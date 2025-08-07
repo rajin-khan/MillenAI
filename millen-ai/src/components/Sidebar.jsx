@@ -28,7 +28,7 @@ const Sidebar = ({ isOpen, onClose, activeChatId, setActiveChatId, onOpenSetting
 
   const handleNewChat = () => {
     setActiveChatId(null);
-    onClose(); // Close sidebar on mobile after clicking "New Chat"
+    onClose();
   };
   
   const openDeleteModal = (chatId) => {
@@ -36,12 +36,20 @@ const Sidebar = ({ isOpen, onClose, activeChatId, setActiveChatId, onOpenSetting
     setIsDeleteModalOpen(true);
   };
 
+  // --- THIS FUNCTION IS NOW MORE ROBUST ---
   const handleConfirmDelete = async () => {
-    if (chatToDelete) {
+    if (!chatToDelete) return;
+
+    try {
       await deleteChat(chatToDelete);
       if (chatToDelete === activeChatId) {
         setActiveChatId(null);
       }
+    } catch (error) {
+      console.error("Failed to delete chat:", error);
+      alert("There was an error deleting the chat. Please try again.");
+    } finally {
+      // This cleanup code will run whether the delete succeeded or failed.
       setChatToDelete(null);
       setIsDeleteModalOpen(false);
     }
@@ -59,12 +67,7 @@ const Sidebar = ({ isOpen, onClose, activeChatId, setActiveChatId, onOpenSetting
 
   const listVariants = {
     hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.07,
-      },
-    },
+    visible: { opacity: 1, transition: { staggerChildren: 0.07 } },
   };
   
   const itemVariants = {
@@ -90,7 +93,7 @@ const Sidebar = ({ isOpen, onClose, activeChatId, setActiveChatId, onOpenSetting
               <ChatHistoryItem
                 chat={chat}
                 isActive={activeChatId === chat.id}
-                onClick={() => { setActiveChatId(chat.id); onClose(); }} // Close sidebar on chat selection
+                onClick={() => { setActiveChatId(chat.id); onClose(); }}
                 onRename={handleRenameChat}
                 onDelete={openDeleteModal}
               />
@@ -119,7 +122,6 @@ const Sidebar = ({ isOpen, onClose, activeChatId, setActiveChatId, onOpenSetting
 
   return (
     <>
-      {/* --- MOBILE SIDEBAR DRAWER --- */}
       <Transition.Root show={isOpen} as={Fragment}>
         <Dialog as="div" className="relative z-40 md:hidden" onClose={onClose}>
           <Transition.Child as={Fragment} enter="transition-opacity ease-linear duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="transition-opacity ease-linear duration-300" leaveFrom="opacity-100" leaveTo="opacity-0">
@@ -135,7 +137,6 @@ const Sidebar = ({ isOpen, onClose, activeChatId, setActiveChatId, onOpenSetting
         </Dialog>
       </Transition.Root>
 
-      {/* --- DESKTOP SIDEBAR (STATIC) --- */}
       <div className="hidden md:flex md:flex-shrink-0">
         {sidebarContent}
       </div>
