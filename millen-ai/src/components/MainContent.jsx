@@ -47,9 +47,10 @@ const MainContent = ({ onToggleSidebar, activeChatId, setActiveChatId, settings,
     setTokenCount(countTokens(messages));
   }, [messages]);
 
-  const handleSendMessage = async (messageContent) => {
-    const content = typeof messageContent === 'string' ? messageContent : input;
-    if (!user || !content.trim() || isLoading) return;
+  const handleSendMessage = async (messageContent, attachments = []) => {
+    const textInput = typeof messageContent === 'string' ? messageContent : input;
+
+    if (!user || (!textInput.trim() && attachments.length === 0) || isLoading) return;
     if (!settings.apiKey) {
       alert("Please set your Groq API key in the settings first.");
       return;
@@ -58,7 +59,21 @@ const MainContent = ({ onToggleSidebar, activeChatId, setActiveChatId, settings,
     setIsLoading(true);
     setInput('');
 
-    const userMessage = { role: 'user', content };
+    let combinedContent = textInput.trim();
+
+    if (attachments.length > 0) {
+      const attachmentContents = attachments.map(file => {
+        // NOTE: Multimodal models would require a different payload structure entirely.
+        // This text-based approach is a robust way to handle text extraction for text-only LLMs.
+        const header = `--- START OF ATTACHED FILE: ${file.name} (Type: ${file.type}) ---`;
+        const footer = `--- END OF FILE: ${file.name} ---`;
+        return `${header}\n\n${file.content}\n\n${footer}`;
+      }).join('\n\n');
+      
+      combinedContent = `${attachmentContents}\n\n${textInput.trim()}`;
+    }
+
+    const userMessage = { role: 'user', content: combinedContent.trim() };
     let currentChatId = activeChatId;
 
     if (!currentChatId) {
@@ -66,14 +81,13 @@ const MainContent = ({ onToggleSidebar, activeChatId, setActiveChatId, settings,
       const newChatId = await createNewChat(user.uid);
       setActiveChatId(newChatId);
       currentChatId = newChatId;
-      const newTitle = content.split(' ').slice(0, 4).join(' ');
+      const newTitle = textInput.trim().split(' ').slice(0, 4).join(' ') || attachments[0]?.name || 'New Chat';
       await updateChatTitle(newChatId, newTitle);
       await addMessageToChat(currentChatId, userMessage);
     } else {
       await addMessageToChat(currentChatId, userMessage);
     }
     
-    // --- CHANGE 1: Exclude 'reasoning' field from history for token optimization ---
     const apiRequestMessages = [...messages, userMessage].map(({ role, content }) => ({ role, content }));
     
     let payload = { model: selectedModel, messages: apiRequestMessages };
@@ -93,16 +107,14 @@ const MainContent = ({ onToggleSidebar, activeChatId, setActiveChatId, settings,
     if (reasoningMode && isGptOss) {
       payload.reasoning_effort = "high";
     }
-    
+
     try {
       const completion = await getGroqCompletion(settings.apiKey, payload);
       const choice = completion.choices[0]?.message;
       
-      // --- CHANGE 2: Create a structured message with separate content and reasoning ---
       const assistantMessage = {
         role: 'assistant',
         content: choice?.content || 'Sorry, I could not generate a response.',
-        // Add the reasoning field if it exists in the API response
         ...(choice?.reasoning && { reasoning: choice.reasoning }),
       };
       
@@ -163,7 +175,6 @@ const MainContent = ({ onToggleSidebar, activeChatId, setActiveChatId, settings,
               
               {isLoading && (
                 <div className="flex justify-center py-6">
-                  {/* --- CHANGE 3: Update LoadingPlaceholder type logic --- */}
                   <LoadingPlaceholder type={webSearchMode ? 'agent' : 'default'} />
                 </div>
               )}
@@ -173,7 +184,14 @@ const MainContent = ({ onToggleSidebar, activeChatId, setActiveChatId, settings,
       </div>
       
       <motion.div layout transition={{ duration: 0.5, type: 'spring', bounce: 0.2 }} className="flex-shrink-0 w-full max-w-3xl px-4 pb-4 sm:px-6 sm:pb-6 mx-auto">
-        <ChatInput input={input} setInput={setInput} handleSendMessage={handleSendMessage} isLoading={isLoading} placeholder="Talk to MillenAI..." enterToSend={settings.enterToSend} />
+        <ChatInput 
+          input={input} 
+          setInput={setInput} 
+          handleSendMessage={handleSendMessage} 
+          isLoading={isLoading} 
+          placeholder="Talk to MillenAI, or attach files..." 
+          enterToSend={settings.enterToSend} 
+        />
       </motion.div>
 
       <ContextStatus isModal={true} isOpen={isContextModalOpen} onClose={() => setIsContextModalOpen(false)} currentTokens={tokenCount} maxTokens={currentModel.contextWindow} modelName={currentModel.name} />

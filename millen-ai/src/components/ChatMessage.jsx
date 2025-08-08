@@ -7,15 +7,8 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { dracula } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import FileIcon from './FileIcon';
 
-// --- ROBUST REASONING PARSER & VIEWER ---
-
-/**
- * Parses the raw reasoning string from Groq into a structured array.
- * This handles both web search logs and plain text reasoning.
- * @param {string} reasoning - The raw reasoning string.
- * @returns {Array<object>} An array of parsed reasoning steps.
- */
 const parseReasoningString = (reasoning) => {
   if (!reasoning) return [];
   
@@ -46,7 +39,6 @@ const parseReasoningString = (reasoning) => {
     return { type: 'text', content: part, id: `text-${index}` };
   });
 };
-
 
 const ReasoningViewer = ({ reasoning }) => {
   const parsedSteps = parseReasoningString(reasoning);
@@ -98,11 +90,8 @@ const ReasoningViewer = ({ reasoning }) => {
   );
 };
 
-
-// --- THE FINAL, POLISHED CHATMESSAGE COMPONENT ---
-
 const ChatMessage = ({ message }) => {
-  const { role, content, reasoning } = message;
+  const { role, content, reasoning, displayText, attachments } = message;
   const isUser = role === 'user';
   
   const codeBlockStyle = {
@@ -149,29 +138,51 @@ const ChatMessage = ({ message }) => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: [0.25, 1, 0.5, 1] }}
-      // --- RESTORED LAYOUT WITH POLISHED STYLING ---
       className={`flex gap-3 sm:gap-4 p-4 my-2 rounded-xl transition-colors duration-300 ${isUser ? '' : 'bg-[#1C1C1C]/40'}`}
     >
-      {/* --- ICONS --- */}
-      {isUser ? (
-        <UserCircleIcon className="w-8 h-8 flex-shrink-0 text-zinc-500 mt-0.5" />
-      ) : (
-        <div className="w-8 h-8 flex-shrink-0 rounded-full bg-gradient-to-r from-emerald-500 to-cyan-600 mt-0.5" />
-      )}
+      <div className="w-8 h-8 flex-shrink-0 rounded-full mt-0.5">
+        {isUser ? (
+          <UserCircleIcon className="w-full h-full text-zinc-500" />
+        ) : (
+          <div className="w-full h-full rounded-full bg-gradient-to-r from-emerald-500 to-cyan-600" />
+        )}
+      </div>
       
-      {/* --- MESSAGE CONTENT --- */}
       <div className="flex flex-col flex-1 overflow-x-auto">
         <span className="font-bold text-white text-base">{isUser ? 'You' : 'MillenAI'}</span>
-        {/* The `prose` classes are critical for rich markdown styling */}
+        
         <div className="prose prose-sm sm:prose-base prose-invert max-w-none text-zinc-200">
-          <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-            {content}
-          </ReactMarkdown>
+          {isUser ? (
+            <div>
+              {attachments && attachments.length > 0 && (
+                <div className="not-prose flex flex-wrap gap-2 my-2">
+                  {attachments.map((att, index) => (
+                    // Display image previews if available, otherwise file icons
+                    att.previewUrl ? (
+                       <img key={index} src={att.previewUrl} alt={att.name} className="h-24 w-auto object-cover rounded-lg border border-zinc-700" />
+                    ) : (
+                      <div key={index} className="flex items-center gap-2 bg-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-200 border border-zinc-700">
+                        <FileIcon fileType={att.type} className="w-5 h-5 flex-shrink-0" />
+                        <span className="truncate">{att.name}</span>
+                      </div>
+                    )
+                  ))}
+                </div>
+              )}
+              {/* --- THE FIX --- */}
+              {/* Render the user's typed text. Use a fallback for old messages without `displayText`. */}
+              {/* Using a <p> tag ensures consistent spacing even if the text is empty. */}
+              <p>{displayText ?? content}</p>
+            </div>
+          ) : (
+            <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+              {content}
+            </ReactMarkdown>
+          )}
         </div>
         
-        {/* --- FULLY FUNCTIONAL COLLAPSIBLE REASONING --- */}
         {reasoning && (
-          <Disclosure as="div" className="mt-4">
+           <Disclosure as="div" className="mt-4">
             {({ open }) => (
               <>
                 <Disclosure.Button className="flex items-center gap-2 text-xs font-semibold text-zinc-400 hover:text-zinc-200 transition-colors">
