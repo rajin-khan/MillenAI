@@ -30,7 +30,7 @@
 
 **MillenAI** is a sleek, high-performance, open-source chat interface designed for seamless interaction with multiple Large Language Models. Built with modern web technologies, it prioritizes speed, user experience, and intelligent conversation management.
 
-<img src="./Documentation/ss1.png" alt="MillenAI Interface Screenshot" width="90%">
+<img src="./Documentation/ss2.png" alt="MillenAI Interface Screenshot" width="90%">
 
 ---
 
