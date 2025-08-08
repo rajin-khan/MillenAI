@@ -2,6 +2,8 @@
 
 <div align="center">
 
+---
+
 <h1>MillenAI</h1>
 
 <p><em>"A thousand minds, one conversation"</em></p>
@@ -30,7 +32,7 @@
 
 <img src="./Documentation/ss1.png" alt="MillenAI Interface Screenshot" width="90%">
 
-</div>
+---
 
 ## The Problem
 
@@ -42,6 +44,8 @@ The landscape of Large Language Models is rapidly expanding, but interacting wit
 - **Poor User Experience** — Functional but unpolished interfaces that lack speed and intuitive design
 
 ## The Solution
+
+</div>
 
 <div align="center">
 
@@ -78,13 +82,15 @@ Every interaction is carefully crafted with subtle animations and modern design 
 </tr>
 </table>
 
-## Features
-
 <div align="center">
 
-### Core Capabilities
+---
 
-</div>
+## Features
+
+---
+
+### Core Capabilities
 
 - **Multi-Model Support** — Seamless switching between Llama 3.1, Llama 3.3, and GPT-OSS models
 - **Universal Web Search** — Enable real-time internet access for any model with a simple toggle
@@ -98,20 +104,7 @@ Every interaction is carefully crafted with subtle animations and modern design 
 - **Guided Onboarding** — Friendly setup process for new users
 - **Modern Animations** — Fluid interface powered by Tailwind CSS and Framer Motion
 
-## Quick Start
-
-<div align="center">
-
-### Get up and running in under 2 minutes
-
-</div>
-
-### Prerequisites
-
-- Node.js 18+ and npm
-- A Groq API key ([Get one free](https://console.groq.com/))
-
-<div align="center">
+---
 
 ### Try It Now
 
@@ -119,9 +112,9 @@ Every interaction is carefully crafted with subtle animations and modern design 
 
 *Experience the future of AI conversation*
 
-## Technology Stack
+---
 
-<div align="center">
+## Technology Stack
 
 | Category | Technology | Purpose |
 |----------|------------|---------|
@@ -136,9 +129,13 @@ Every interaction is carefully crafted with subtle animations and modern design 
 
 </div>
 
-## API Integration
+---
 
 <div align="center">
+
+## API Integration:
+
+---
 
 ### Currently Supported
 
@@ -152,15 +149,17 @@ Every interaction is carefully crafted with subtle animations and modern design 
 
 <div align="center">
 
+---
+
 ### Coming Soon
 
 **OpenRouter** • **Together AI** • **Anthropic** • **Cohere** • **Local (Ollama)**
 
-</div>
+---
 
+## Roadmap:
 
-
-## Roadmap
+---
 
 <div align="center">
 
@@ -186,9 +185,22 @@ Every interaction is carefully crafted with subtle animations and modern design 
 - Developer tools and API inspector
 - Custom model integration
 
+---
+
+## **👥 Development Team:**
+Just me, actually.
+
+| Name                      | Institution             | ID | GitHub | Followers |
+|---------------------------|-------------------------|--  |--------|------|
+| **Rajin Khan**            | North South University | 2212708042 | [![Rajin's GitHub](https://img.shields.io/badge/-rajin--khan-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/rajin-khan) | ![Followers](https://img.shields.io/github/followers/rajin-khan?label=Follow&style=social) |
+
+---
+
 ## Contributing
 
 We welcome contributions from the community! Whether you're fixing bugs, adding features, or improving documentation, your help makes MillenAI better for everyone.
+
+---
 
 ## License
 
