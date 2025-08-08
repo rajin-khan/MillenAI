@@ -156,20 +156,17 @@ const ChatMessage = ({ message }) => {
             <div>
               {attachments && attachments.length > 0 && (
                 <div className="not-prose flex flex-wrap gap-2 my-2">
+                  {/* --- THE FIX --- */}
+                  {/* Always render the file icon block for every attachment, including images. */}
                   {attachments.map((att, index) => (
-                    // Display image previews if available, otherwise file icons
-                    att.previewUrl ? (
-                       <img key={index} src={att.previewUrl} alt={att.name} className="h-24 w-auto object-cover rounded-lg border border-zinc-700" />
-                    ) : (
-                      <div key={index} className="flex items-center gap-2 bg-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-200 border border-zinc-700">
-                        <FileIcon fileType={att.type} className="w-5 h-5 flex-shrink-0" />
-                        <span className="truncate">{att.name}</span>
-                      </div>
-                    )
+                    <div key={index} className="flex items-center gap-2 bg-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-200 border border-zinc-700">
+                      <FileIcon fileType={att.type} className="w-5 h-5 flex-shrink-0" />
+                      <span className="truncate">{att.name}</span>
+                    </div>
                   ))}
+                  {/* --- END OF FIX --- */}
                 </div>
               )}
-              {/* --- THE FIX --- */}
               {/* Render the user's typed text. Use a fallback for old messages without `displayText`. */}
               {/* Using a <p> tag ensures consistent spacing even if the text is empty. */}
               <p>{displayText ?? content}</p>

@@ -63,8 +63,6 @@ const MainContent = ({ onToggleSidebar, activeChatId, setActiveChatId, settings,
 
     if (attachments.length > 0) {
       const attachmentContents = attachments.map(file => {
-        // NOTE: Multimodal models would require a different payload structure entirely.
-        // This text-based approach is a robust way to handle text extraction for text-only LLMs.
         const header = `--- START OF ATTACHED FILE: ${file.name} (Type: ${file.type}) ---`;
         const footer = `--- END OF FILE: ${file.name} ---`;
         return `${header}\n\n${file.content}\n\n${footer}`;
@@ -73,10 +71,23 @@ const MainContent = ({ onToggleSidebar, activeChatId, setActiveChatId, settings,
       combinedContent = `${attachmentContents}\n\n${textInput.trim()}`;
     }
 
-    const userMessage = { role: 'user', content: combinedContent.trim() };
+    // --- THE FIX: Create a structured message for better rendering ---
+    const userMessage = { 
+      role: 'user', 
+      content: combinedContent.trim(), // This is the full content for the LLM
+      displayText: textInput.trim(),    // This is only what the user typed
+      attachments: attachments.map(att => ({ // This is the metadata for rendering file icons/previews
+        name: att.name,
+        type: att.type,
+        previewUrl: att.previewUrl || null // Keep the preview URL for images
+      }))
+    };
+    // --- END OF FIX ---
+
     let currentChatId = activeChatId;
 
     if (!currentChatId) {
+      // Temporarily set messages for instant UI feedback, but it will be replaced by the real-time listener
       setMessages([userMessage]);
       const newChatId = await createNewChat(user.uid);
       setActiveChatId(newChatId);
@@ -88,6 +99,7 @@ const MainContent = ({ onToggleSidebar, activeChatId, setActiveChatId, settings,
       await addMessageToChat(currentChatId, userMessage);
     }
     
+    // Use the latest messages from state to build the API context
     const apiRequestMessages = [...messages, userMessage].map(({ role, content }) => ({ role, content }));
     
     let payload = { model: selectedModel, messages: apiRequestMessages };
@@ -129,6 +141,7 @@ const MainContent = ({ onToggleSidebar, activeChatId, setActiveChatId, settings,
     }
   };
 
+  // ... rest of the component remains the same
   return (
     <div className="flex flex-col flex-1 h-full relative">
       <AnimatePresence>
