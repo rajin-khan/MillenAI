@@ -8,11 +8,49 @@ import {
 } from '@heroicons/react/24/outline';
 import ModelSelector from './ModelSelector';
 import AgenticControls from './AgenticControls';
-import ChatInput from './ChatInput'; // Import ChatInput
-import { signInWithGoogle } from '../lib/firebase'; // Import the sign-in function
+import ChatInput from './ChatInput';
+import { signInWithGoogle } from '../lib/firebase';
+
+const greetings = {
+  morning: ["Good morning, {{name}}.", "Rise and shine, {{name}}!", "What's on the agenda today, {{name}}?", "Ready to build the future, {{name}}?"],
+  afternoon: ["Good afternoon, {{name}}.", "Hope you're having a productive day, {{name}}.", "How can I help this afternoon, {{name}}?", "Let's bring your ideas to life, {{name}}."],
+  evening: ["Good evening, {{name}}.", "Winding down or gearing up, {{name}}?", "What's on your mind this evening?", "Time for some creative exploration, {{name}}?"],
+  night: ["Hello, night owl.", "Burning the midnight oil, {{name}}?", "Late night session? I'm ready.", "Inspiration strikes late, doesn't it, {{name}}?"],
+};
+
+const getWelcomeMessage = (user) => {
+  const hour = new Date().getHours();
+  let period;
+
+  if (hour >= 5 && hour < 12) period = 'morning';
+  else if (hour >= 12 && hour < 18) period = 'afternoon';
+  else if (hour >= 18 && hour < 22) period = 'evening';
+  else period = 'night';
+
+  const template = greetings[period][Math.floor(Math.random() * greetings[period].length)];
+  const firstName = user?.displayName?.split(' ')[0];
+
+  const staticClassName = "text-white";
+  const dynamicClassName = "text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-400 font-semibold";
+  
+  const characterArray = [];
+
+  if (firstName && template.includes('{{name}}')) {
+    const parts = template.split('{{name}}');
+    parts[0].split('').forEach(char => characterArray.push({ char, className: staticClassName }));
+    firstName.split('').forEach(char => characterArray.push({ char, className: dynamicClassName }));
+    if (parts[1]) {
+      parts[1].split('').forEach(char => characterArray.push({ char, className: staticClassName }));
+    }
+  } else {
+    const genericMessage = template.replace(', {{name}}', '').replace(' {{name}}', '').replace('{{name}}', 'you');
+    genericMessage.split('').forEach(char => characterArray.push({ char, className: staticClassName }));
+  }
+
+  return characterArray;
+};
 
 const suggestionCategories = [
-  // ... (keeping the same detailed suggestionCategories data from the previous step)
   { 
     name: 'Write', icon: PencilSquareIcon, 
     prompts: [
@@ -63,13 +101,15 @@ const suggestionCategories = [
 const WelcomeScreen = ({ user, input, setInput, handleSendMessage, onSuggestionClick, models, selectedModel, setSelectedModel, onToggleSidebar, webSearchMode, setWebSearchMode, reasoningMode, setReasoningMode, settings }) => {
   const [activeCategory, setActiveCategory] = useState(null);
   const isGptOss = selectedModel.includes('gpt-oss');
+  
+  // --- THE FIX: Use useState with an initializer function to generate the message only once ---
+  const [welcomeCharacters] = useState(() => getWelcomeMessage(user));
 
-  // --- BUG FIX: Handle prompt clicks intelligently ---
   const handlePromptClick = (promptAction) => {
     if (user) {
       onSuggestionClick(promptAction);
     } else {
-      signInWithGoogle(); // Prompt user to sign in first
+      signInWithGoogle();
     }
   };
 
@@ -84,6 +124,16 @@ const WelcomeScreen = ({ user, input, setInput, handleSendMessage, onSuggestionC
     visible: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 100 } },
     exit: { opacity: 0, y: -20, transition: { duration: 0.15 } },
   };
+  
+  const welcomeContainerVariants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1, transition: { staggerChildren: 0.02, delayChildren: 0.2 } }
+  };
+  
+  const welcomeCharVariants = {
+    hidden: { opacity: 0, y: 10, filter: 'blur(3px)' },
+    visible: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { type: 'spring', damping: 15, stiffness: 400 } }
+  };
 
   return (
     <div className="flex flex-col w-full h-full text-center">
@@ -95,33 +145,39 @@ const WelcomeScreen = ({ user, input, setInput, handleSendMessage, onSuggestionC
 
       <div className="flex-grow flex flex-col items-center justify-center">
         <div className="w-full max-w-3xl">
-          <motion.h1 
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, ease: 'easeOut' }}
-            className="text-4xl sm:text-5xl font-bold tracking-tight text-white mb-6"
-          >
-            How can I help you today?
-          </motion.h1>
-
+          
+          <div className="mb-12">
+            <motion.h1 
+              variants={welcomeContainerVariants}
+              initial="hidden"
+              animate="visible"
+              className="text-3xl sm:text-4xl font-bold tracking-tight flex flex-wrap justify-center leading-tight"
+            >
+              {welcomeCharacters.map((item, index) => (
+                <motion.span key={index} variants={welcomeCharVariants} className={item.className}>
+                  {item.char === " " ? "\u00A0" : item.char}
+                </motion.span>
+              ))}
+            </motion.h1>
+          </div>
+          
           <motion.div 
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5, delay: 0.1, ease: 'easeOut' }}
+            transition={{ duration: 0.5, delay: 1.2, ease: 'easeOut' }}
             className="mb-8 flex justify-center items-center gap-4"
           >
             <ModelSelector models={models} selectedModel={selectedModel} onModelChange={setSelectedModel} />
             <AgenticControls isGptOss={isGptOss} webSearchMode={webSearchMode} setWebSearchMode={setWebSearchMode} reasoningMode={reasoningMode} setReasoningMode={setReasoningMode} />
           </motion.div>
 
-          {/* --- NEW: Integrated ChatInput --- */}
           <div className="px-4 sm:px-0">
              <ChatInput 
               input={input} 
               setInput={setInput} 
               handleSendMessage={handleSendMessage} 
-              isLoading={false} // Loading is handled by MainContent
-              placeholder="Talk to MillenAI, or attach files..." 
+              isLoading={false}
+              placeholder="How can I help you today?"
               enterToSend={settings.enterToSend} 
             />
           </div>
