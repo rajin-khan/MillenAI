@@ -79,20 +79,35 @@ const MainContent = ({ onToggleSidebar, activeChatId, setActiveChatId, settings,
     };
 
     let currentChatId = activeChatId;
+    const previousMessages = [...messages]; // Capture current messages for API call
 
     if (!currentChatId) {
+      // --- THE FIX: PART 1 ---
+      // Optimistically update the UI *before* any network requests.
+      // This makes the transition from WelcomeScreen to ChatView feel instant.
       setMessages([userMessage]);
+      
+      // The only thing we MUST wait for is the new chat ID.
       const newChatId = await createNewChat(user.uid);
+      
+      // Now that we have the ID, update the state to finalize the UI transition.
       setActiveChatId(newChatId);
       currentChatId = newChatId;
+
+      // These database operations can now run in the background without blocking the UI.
       const newTitle = textInput.trim().split(' ').slice(0, 4).join(' ') || attachments[0]?.name || 'New Chat';
-      await updateChatTitle(newChatId, newTitle);
-      await addMessageToChat(currentChatId, userMessage);
+      updateChatTitle(currentChatId, newTitle); // No await
+      addMessageToChat(currentChatId, userMessage); // No await
+      
     } else {
-      await addMessageToChat(currentChatId, userMessage);
+      // --- THE FIX: PART 2 ---
+      // For existing chats, we can also remove the await.
+      // The Firestore listener (`onSnapshot`) will handle updating the UI from the database truth.
+      addMessageToChat(currentChatId, userMessage); // No await
     }
     
-    const apiRequestMessages = [...messages, userMessage].map(({ role, content }) => ({ role, content }));
+    // Use the captured `previousMessages` so the API call has the correct context.
+    const apiRequestMessages = [...previousMessages, userMessage].map(({ role, content }) => ({ role, content }));
     
     let payload = { model: selectedModel, messages: apiRequestMessages };
 
@@ -122,12 +137,11 @@ const MainContent = ({ onToggleSidebar, activeChatId, setActiveChatId, settings,
         ...(choice?.reasoning && { reasoning: choice.reasoning }),
       };
       
-      await addMessageToChat(currentChatId, assistantMessage);
-
+      addMessageToChat(currentChatId, assistantMessage); // No await here either
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
       console.error(`API call failed:`, error);
-      await addMessageToChat(currentChatId, { role: 'assistant', content: `An error occurred: ${errorMessage}` });
+      addMessageToChat(currentChatId, { role: 'assistant', content: `An error occurred: ${errorMessage}` }); // No await
     } finally {
       setIsLoading(false);
     }
@@ -183,7 +197,6 @@ const MainContent = ({ onToggleSidebar, activeChatId, setActiveChatId, settings,
         </AnimatePresence>
       </div>
       
-      {/* --- THE FIX: Conditionally render the ChatInput footer --- */}
       {isChatActive && (
         <motion.div 
           initial={{ y: 100 }}
