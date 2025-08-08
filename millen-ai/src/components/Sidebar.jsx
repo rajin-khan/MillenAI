@@ -1,3 +1,5 @@
+// /millen-ai/src/components/Sidebar.jsx
+
 import { useEffect, useState, Fragment } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { PlusIcon, ArrowRightOnRectangleIcon, Cog6ToothIcon } from '@heroicons/react/24/outline';
@@ -36,7 +38,6 @@ const Sidebar = ({ isOpen, onClose, activeChatId, setActiveChatId, onOpenSetting
     setIsDeleteModalOpen(true);
   };
 
-  // --- THIS FUNCTION IS NOW MORE ROBUST ---
   const handleConfirmDelete = async () => {
     if (!chatToDelete) return;
 
@@ -49,7 +50,6 @@ const Sidebar = ({ isOpen, onClose, activeChatId, setActiveChatId, onOpenSetting
       console.error("Failed to delete chat:", error);
       alert("There was an error deleting the chat. Please try again.");
     } finally {
-      // This cleanup code will run whether the delete succeeded or failed.
       setChatToDelete(null);
       setIsDeleteModalOpen(false);
     }
@@ -76,17 +76,18 @@ const Sidebar = ({ isOpen, onClose, activeChatId, setActiveChatId, onOpenSetting
   };
   
   const sidebarContent = (
-    <div className="flex flex-col w-72 p-3 bg-[#111111] border-r border-white/5 h-full">
-      <div className="flex-shrink-0 mb-5 text-left pl-2">
+    // --- CHANGE: Updated background, border, and layout styles ---
+    <div className="flex flex-col w-72 p-4 bg-[#1C1C1C]/60 backdrop-blur-xl border-r border-zinc-700/50 h-full">
+      <div className="flex-shrink-0 mb-6 text-left">
         <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-400">MillenAI</h1>
       </div>
 
-      <button onClick={handleNewChat} className="flex items-center justify-center w-full gap-2 px-4 py-2.5 mb-6 text-base font-semibold text-white transition-all duration-300 ease-in-out rounded-full bg-gradient-to-r from-emerald-400 to-cyan-400 hover:scale-105 active:scale-100 disabled:opacity-50" disabled={!user}>
+      <button onClick={handleNewChat} className="flex items-center justify-center w-full gap-2 px-4 py-2.5 mb-6 text-sm font-semibold text-white transition-all duration-300 ease-in-out rounded-lg bg-emerald-600 hover:bg-emerald-500 hover:scale-105 active:scale-100 disabled:opacity-50" disabled={!user}>
         <PlusIcon className="w-5 h-5" />
         New Chat
       </button>
       
-      <div className="flex-grow pr-1 -mr-2 overflow-y-auto">
+      <div className="flex-grow pr-1 -mr-3 overflow-y-auto">
         <motion.div className="flex flex-col gap-1" variants={listVariants} initial="hidden" animate="visible">
           {chats.map(chat => (
             <motion.div key={chat.id} variants={itemVariants}>
@@ -102,7 +103,7 @@ const Sidebar = ({ isOpen, onClose, activeChatId, setActiveChatId, onOpenSetting
         </motion.div>
       </div>
 
-      <div className="flex-shrink-0 pt-3 mt-2 border-t border-white/10">
+      <div className="flex-shrink-0 pt-4 mt-2 border-t border-zinc-700/50">
         {user ? (
           <div className="group flex items-center w-full gap-3 p-2 text-zinc-200">
             <UserAvatar user={user} />

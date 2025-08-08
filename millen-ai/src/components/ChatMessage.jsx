@@ -8,45 +8,45 @@ import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { dracula } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
-// --- NEW HELPER FUNCTION & COMPONENT ---
+// --- ROBUST REASONING PARSER & VIEWER ---
 
 /**
- * Parses the raw reasoning string from Groq into a structured array of objects.
- * This handles both standard reasoning text and web search results.
+ * Parses the raw reasoning string from Groq into a structured array.
+ * This handles both web search logs and plain text reasoning.
  * @param {string} reasoning - The raw reasoning string.
  * @returns {Array<object>} An array of parsed reasoning steps.
  */
 const parseReasoningString = (reasoning) => {
-  if (!reasoning || !reasoning.includes('URL:')) {
-    // If it's not a web search log, return it as a single block of text.
-    return [{ type: 'text', content: reasoning }];
-  }
-
-  // Split the log into chunks, each starting with a URL.
-  const parts = reasoning.split('URL: ').slice(1);
+  if (!reasoning) return [];
+  
+  const regex = /(URL:[\s\S]*?)(?=URL:|$)/g;
+  const parts = reasoning.split(regex).filter(part => part && part.trim() !== '');
 
   return parts.map((part, index) => {
-    // Find the boundary between the URL and the search results.
-    const searchResultsMarker = 'Search Results';
-    const markerIndex = part.indexOf(searchResultsMarker);
+    if (part.startsWith('URL:')) {
+      const content = part.substring(4).trim();
+      const searchResultsMarker = 'Search Results';
+      const markerIndex = content.indexOf(searchResultsMarker);
+      
+      let url, searchResults;
+      if (markerIndex !== -1) {
+        url = content.substring(0, markerIndex).trim().split('\n')[0];
+        searchResults = content.substring(markerIndex + searchResultsMarker.length).trim();
+      } else {
+        const lines = content.split('\n');
+        url = lines[0];
+        searchResults = lines.slice(1).join('\n');
+      }
 
-    let url, searchResults;
-    if (markerIndex !== -1) {
-      url = part.substring(0, markerIndex).trim().split('\n')[0]; // Get the first line as URL
-      searchResults = part.substring(markerIndex + searchResultsMarker.length).trim();
-    } else {
-      // Fallback if the format is slightly different
-      const lines = part.trim().split('\n');
-      url = lines[0];
-      searchResults = lines.slice(1).join('\n');
+      searchResults = searchResults.replace(/L\d+:\s?/g, '\n').replace(/†/g, ' - ').replace(/【\d+\s-\s/g, '【').trim();
+      
+      return { type: 'search', url, searchResults, id: `search-${index}` };
     }
-
-    // Clean up the messy prefixes like "L0:", "L1:", and special characters.
-    searchResults = searchResults.replace(/L\d+:\s?/g, '\n').replace(/†/g, ' - ').replace(/【\d+\s-\s/g, '【').trim();
-
-    return { type: 'search', url, searchResults, id: index };
+    
+    return { type: 'text', content: part, id: `text-${index}` };
   });
 };
+
 
 const ReasoningViewer = ({ reasoning }) => {
   const parsedSteps = parseReasoningString(reasoning);
@@ -87,9 +87,9 @@ const ReasoningViewer = ({ reasoning }) => {
             </Disclosure>
           );
         }
-        // Fallback for regular text reasoning
+        
         return (
-          <div key={index} className="prose prose-sm prose-invert max-w-none text-zinc-300">
+          <div key={step.id} className="prose prose-sm prose-invert max-w-none text-zinc-300 bg-zinc-900/50 rounded-lg border border-zinc-700/80 p-3">
              <ReactMarkdown remarkPlugins={[remarkGfm]}>{step.content}</ReactMarkdown>
           </div>
         );
@@ -99,7 +99,7 @@ const ReasoningViewer = ({ reasoning }) => {
 };
 
 
-// --- UPDATED CHATMESSAGE COMPONENT ---
+// --- THE FINAL, POLISHED CHATMESSAGE COMPONENT ---
 
 const ChatMessage = ({ message }) => {
   const { role, content, reasoning } = message;
@@ -149,21 +149,27 @@ const ChatMessage = ({ message }) => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: [0.25, 1, 0.5, 1] }}
-      className={`flex gap-3 sm:gap-4 p-3 sm:p-4 my-2 rounded-xl transition-shadow duration-300 ${isUser ? 'bg-zinc-800/50' : ''} hover:bg-zinc-800/30`}
+      // --- RESTORED LAYOUT WITH POLISHED STYLING ---
+      className={`flex gap-3 sm:gap-4 p-4 my-2 rounded-xl transition-colors duration-300 ${isUser ? '' : 'bg-[#1C1C1C]/40'}`}
     >
+      {/* --- ICONS --- */}
       {isUser ? (
-        <UserCircleIcon className="w-7 h-7 sm:w-8 sm:h-8 flex-shrink-0 text-zinc-400" />
+        <UserCircleIcon className="w-8 h-8 flex-shrink-0 text-zinc-500 mt-0.5" />
       ) : (
-        <div className="w-7 h-7 sm:w-8 sm:h-8 flex-shrink-0 rounded-full bg-gradient-to-r from-emerald-500 to-cyan-600" />
+        <div className="w-8 h-8 flex-shrink-0 rounded-full bg-gradient-to-r from-emerald-500 to-cyan-600 mt-0.5" />
       )}
+      
+      {/* --- MESSAGE CONTENT --- */}
       <div className="flex flex-col flex-1 overflow-x-auto">
-        <span className="font-bold text-white text-sm sm:text-base">{isUser ? 'You' : 'MillenAI'}</span>
+        <span className="font-bold text-white text-base">{isUser ? 'You' : 'MillenAI'}</span>
+        {/* The `prose` classes are critical for rich markdown styling */}
         <div className="prose prose-sm sm:prose-base prose-invert max-w-none text-zinc-200">
           <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
             {content}
           </ReactMarkdown>
         </div>
         
+        {/* --- FULLY FUNCTIONAL COLLAPSIBLE REASONING --- */}
         {reasoning && (
           <Disclosure as="div" className="mt-4">
             {({ open }) => (
@@ -180,7 +186,6 @@ const ChatMessage = ({ message }) => {
                   leaveFrom="transform translate-y-0 opacity-100"
                   leaveTo="transform -translate-y-2 opacity-0"
                 >
-                  {/* --- CHANGE: Use the new ReasoningViewer component --- */}
                   <Disclosure.Panel className="mt-2">
                      <ReasoningViewer reasoning={reasoning} />
                   </Disclosure.Panel>

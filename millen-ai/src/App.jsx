@@ -5,7 +5,9 @@ import Sidebar from './components/Sidebar';
 import MainContent from './components/MainContent';
 import SettingsModal from './components/SettingsModal';
 import OnboardingModal from './components/OnboardingModal';
+import AnimatedBackground from './components/AnimatedBackground';
 import { useAuth } from './context/AuthContext';
+import { usePrevious } from './hooks/usePrevious'; // --- CHANGE 1: Import the new hook ---
 
 const models = [
   { id: 3, name: 'openai/gpt-oss-120b', contextWindow: 131072 },
@@ -18,11 +20,8 @@ const App = () => {
   const { user, loading } = useAuth();
   const [activeChatId, setActiveChatId] = useState(null);
   const [selectedModel, setSelectedModel] = useState(models[0].name);
-  
-  // --- CHANGE 1: Replace agenticMode with two separate states ---
   const [webSearchMode, setWebSearchMode] = useState(false);
   const [reasoningMode, setReasoningMode] = useState(false);
-  
   const [settings, setSettings] = useState(() => {
     const savedSettings = localStorage.getItem('millenai_settings');
     return savedSettings ? JSON.parse(savedSettings) : { apiKey: '', enterToSend: true, darkMode: true };
@@ -30,6 +29,9 @@ const App = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
+
+  // --- CHANGE 2: Track the previous value of activeChatId ---
+  const prevActiveChatId = usePrevious(activeChatId);
 
   useEffect(() => {
     const hasVisited = localStorage.getItem('millenai_has_visited');
@@ -51,11 +53,17 @@ const App = () => {
     if (!user) setActiveChatId(null);
   }, [user]);
 
-  // --- CHANGE 2: Reset new modes when model changes ---
+  // --- CHANGE 3: The Fix - Refine the reset logic ---
   useEffect(() => {
-    setWebSearchMode(false);
-    setReasoningMode(false);
-  }, [selectedModel, activeChatId]);
+    // This effect now resets the toggles ONLY IF:
+    // 1. The model is changed.
+    // 2. We are switching from one EXISTING chat to another (prev was not null).
+    // This prevents the reset when going from the welcome screen (null) to the first chat.
+    if (prevActiveChatId !== null) {
+      setWebSearchMode(false);
+      setReasoningMode(false);
+    }
+  }, [selectedModel, activeChatId, prevActiveChatId]); // Add prevActiveChatId to dependencies
 
 
   const handleSaveSettings = (newSettings) => setSettings(newSettings);
@@ -65,10 +73,8 @@ const App = () => {
   }
 
   return (
-    <main className="relative flex w-full h-dvh font-sans bg-[#0D1117] overflow-hidden">
-      <div 
-        className="absolute inset-0 -z-10 bg-aurora bg-[length:200%_200%] animate-aurora-background" 
-      />
+    <main className="relative flex w-full h-dvh font-sans bg-transparent overflow-hidden">
+      <AnimatedBackground />
       
       <OnboardingModal isOpen={isOnboardingOpen} onClose={handleOnboardingComplete} />
       
@@ -87,7 +93,6 @@ const App = () => {
         models={models}
         selectedModel={selectedModel}
         setSelectedModel={setSelectedModel}
-        // --- CHANGE 3: Pass down new state and setters ---
         webSearchMode={webSearchMode}
         setWebSearchMode={setWebSearchMode}
         reasoningMode={reasoningMode}

@@ -1,3 +1,5 @@
+// /millen-ai/src/components/ChatHistoryItem.jsx
+
 import { useState, useRef, useEffect } from 'react';
 import { ChatBubbleLeftIcon, PencilIcon, TrashIcon, CheckIcon } from '@heroicons/react/24/solid';
 
@@ -6,7 +8,6 @@ const ChatHistoryItem = ({ chat, isActive, onClick, onRename, onDelete }) => {
   const [title, setTitle] = useState(chat.title);
   const inputRef = useRef(null);
 
-  // Focus the input when editing starts
   useEffect(() => {
     if (isEditing && inputRef.current) {
       inputRef.current.focus();
@@ -31,6 +32,7 @@ const ChatHistoryItem = ({ chat, isActive, onClick, onRename, onDelete }) => {
   };
 
   return (
+    // --- CHANGE: Refined active/hover states and colors ---
     <div 
       onClick={() => !isEditing && onClick()}
       className={`group relative flex items-center gap-3 cursor-pointer rounded-lg p-3 transition-colors duration-200 ${isActive ? 'bg-zinc-800' : 'hover:bg-zinc-800/50'}`}
@@ -53,14 +55,13 @@ const ChatHistoryItem = ({ chat, isActive, onClick, onRename, onDelete }) => {
         </p>
       )}
 
-      {/* Action Icons */}
       <div className="absolute right-2 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
         {isEditing ? (
           <button onClick={handleRename} className="p-1 hover:text-white text-emerald-400"><CheckIcon className="w-4 h-4" /></button>
         ) : (
           <>
-            <button onClick={() => setIsEditing(true)} className="p-1 hover:text-white text-zinc-400"><PencilIcon className="w-4 h-4" /></button>
-            <button onClick={() => onDelete(chat.id)} className="p-1 hover:text-red-400 text-zinc-400"><TrashIcon className="w-4 h-4" /></button>
+            <button onClick={(e) => { e.stopPropagation(); setIsEditing(true); }} className="p-1 hover:text-white text-zinc-400"><PencilIcon className="w-4 h-4" /></button>
+            <button onClick={(e) => { e.stopPropagation(); onDelete(chat.id); }} className="p-1 hover:text-red-400 text-zinc-400"><TrashIcon className="w-4 h-4" /></button>
           </>
         )}
       </div>
