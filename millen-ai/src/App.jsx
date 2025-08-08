@@ -1,8 +1,10 @@
+// /millen-ai/src/App.jsx
+
 import { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import MainContent from './components/MainContent';
 import SettingsModal from './components/SettingsModal';
-import OnboardingModal from './components/OnboardingModal'; // <-- 1. Import the new modal
+import OnboardingModal from './components/OnboardingModal';
 import { useAuth } from './context/AuthContext';
 
 const models = [
@@ -16,19 +18,20 @@ const App = () => {
   const { user, loading } = useAuth();
   const [activeChatId, setActiveChatId] = useState(null);
   const [selectedModel, setSelectedModel] = useState(models[0].name);
-  const [agenticMode, setAgenticMode] = useState(null);
+  
+  // --- CHANGE 1: Replace agenticMode with two separate states ---
+  const [webSearchMode, setWebSearchMode] = useState(false);
+  const [reasoningMode, setReasoningMode] = useState(false);
+  
   const [settings, setSettings] = useState(() => {
     const savedSettings = localStorage.getItem('millenai_settings');
     return savedSettings ? JSON.parse(savedSettings) : { apiKey: '', enterToSend: true, darkMode: true };
   });
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-
-  // --- 2. ADD THIS NEW STATE AND EFFECT ---
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
 
   useEffect(() => {
-    // Check localStorage only once when the app component mounts
     const hasVisited = localStorage.getItem('millenai_has_visited');
     if (!hasVisited) {
       setIsOnboardingOpen(true);
@@ -39,7 +42,6 @@ const App = () => {
     localStorage.setItem('millenai_has_visited', 'true');
     setIsOnboardingOpen(false);
   };
-  // --- END OF NEW LOGIC ---
 
   useEffect(() => {
     localStorage.setItem('millenai_settings', JSON.stringify(settings));
@@ -49,9 +51,12 @@ const App = () => {
     if (!user) setActiveChatId(null);
   }, [user]);
 
+  // --- CHANGE 2: Reset new modes when model changes ---
   useEffect(() => {
-    setAgenticMode(null);
-  }, [selectedModel]);
+    setWebSearchMode(false);
+    setReasoningMode(false);
+  }, [selectedModel, activeChatId]);
+
 
   const handleSaveSettings = (newSettings) => setSettings(newSettings);
 
@@ -65,7 +70,6 @@ const App = () => {
         className="absolute inset-0 -z-10 bg-aurora bg-[length:200%_200%] animate-aurora-background" 
       />
       
-      {/* --- 3. RENDER THE NEW MODAL --- */}
       <OnboardingModal isOpen={isOnboardingOpen} onClose={handleOnboardingComplete} />
       
       <Sidebar 
@@ -83,8 +87,11 @@ const App = () => {
         models={models}
         selectedModel={selectedModel}
         setSelectedModel={setSelectedModel}
-        agenticMode={agenticMode}
-        setAgenticMode={setAgenticMode}
+        // --- CHANGE 3: Pass down new state and setters ---
+        webSearchMode={webSearchMode}
+        setWebSearchMode={setWebSearchMode}
+        reasoningMode={reasoningMode}
+        setReasoningMode={setReasoningMode}
       />
       <SettingsModal
         isOpen={isSettingsOpen}

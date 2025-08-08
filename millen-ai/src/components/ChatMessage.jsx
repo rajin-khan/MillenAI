@@ -1,12 +1,108 @@
+// /millen-ai/src/components/ChatMessage.jsx
+
 import { motion } from 'framer-motion';
-import { UserCircleIcon } from '@heroicons/react/24/solid';
+import { UserCircleIcon, ChevronDownIcon, LinkIcon } from '@heroicons/react/24/solid';
+import { Disclosure, Transition } from '@headlessui/react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { dracula } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
+// --- NEW HELPER FUNCTION & COMPONENT ---
+
+/**
+ * Parses the raw reasoning string from Groq into a structured array of objects.
+ * This handles both standard reasoning text and web search results.
+ * @param {string} reasoning - The raw reasoning string.
+ * @returns {Array<object>} An array of parsed reasoning steps.
+ */
+const parseReasoningString = (reasoning) => {
+  if (!reasoning || !reasoning.includes('URL:')) {
+    // If it's not a web search log, return it as a single block of text.
+    return [{ type: 'text', content: reasoning }];
+  }
+
+  // Split the log into chunks, each starting with a URL.
+  const parts = reasoning.split('URL: ').slice(1);
+
+  return parts.map((part, index) => {
+    // Find the boundary between the URL and the search results.
+    const searchResultsMarker = 'Search Results';
+    const markerIndex = part.indexOf(searchResultsMarker);
+
+    let url, searchResults;
+    if (markerIndex !== -1) {
+      url = part.substring(0, markerIndex).trim().split('\n')[0]; // Get the first line as URL
+      searchResults = part.substring(markerIndex + searchResultsMarker.length).trim();
+    } else {
+      // Fallback if the format is slightly different
+      const lines = part.trim().split('\n');
+      url = lines[0];
+      searchResults = lines.slice(1).join('\n');
+    }
+
+    // Clean up the messy prefixes like "L0:", "L1:", and special characters.
+    searchResults = searchResults.replace(/L\d+:\s?/g, '\n').replace(/†/g, ' - ').replace(/【\d+\s-\s/g, '【').trim();
+
+    return { type: 'search', url, searchResults, id: index };
+  });
+};
+
+const ReasoningViewer = ({ reasoning }) => {
+  const parsedSteps = parseReasoningString(reasoning);
+
+  return (
+    <div className="space-y-2">
+      {parsedSteps.map((step, index) => {
+        if (step.type === 'search') {
+          return (
+            <Disclosure key={step.id}>
+              {({ open }) => (
+                <div className="bg-zinc-900/50 rounded-lg border border-zinc-700/80">
+                  <Disclosure.Button className="w-full flex justify-between items-center p-3 text-left text-xs">
+                    <div className="flex items-center gap-2 overflow-hidden">
+                      <LinkIcon className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                      <span className="font-mono font-medium text-zinc-300 truncate">
+                        Source {index + 1}: {new URL(step.url).hostname}
+                      </span>
+                    </div>
+                    <ChevronDownIcon className={`w-4 h-4 text-zinc-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+                  </Disclosure.Button>
+                  <Transition
+                    enter="transition duration-100 ease-out"
+                    enterFrom="transform -translate-y-2 opacity-0"
+                    enterTo="transform translate-y-0 opacity-100"
+                    leave="transition duration-75 ease-out"
+                    leaveFrom="transform translate-y-0 opacity-100"
+                    leaveTo="transform -translate-y-2 opacity-0"
+                  >
+                    <Disclosure.Panel className="px-3 pb-3 text-zinc-400">
+                      <pre className="whitespace-pre-wrap font-mono text-xs bg-black/30 p-3 rounded-md overflow-x-auto">
+                        {step.searchResults}
+                      </pre>
+                    </Disclosure.Panel>
+                  </Transition>
+                </div>
+              )}
+            </Disclosure>
+          );
+        }
+        // Fallback for regular text reasoning
+        return (
+          <div key={index} className="prose prose-sm prose-invert max-w-none text-zinc-300">
+             <ReactMarkdown remarkPlugins={[remarkGfm]}>{step.content}</ReactMarkdown>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+
+// --- UPDATED CHATMESSAGE COMPONENT ---
+
 const ChatMessage = ({ message }) => {
-  const { role, content } = message; // No more isLoading or placeholderType
+  const { role, content, reasoning } = message;
   const isUser = role === 'user';
   
   const codeBlockStyle = {
@@ -24,7 +120,7 @@ const ChatMessage = ({ message }) => {
     ol: ({node, ...props}) => <ol className="list-decimal pl-6 my-2" {...props} />,
     li: ({node, ...props}) => <li className="mb-1" {...props} />,
     blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-emerald-500 pl-4 my-4 italic text-zinc-400" {...props} />,
-    a: ({node, ...props}) => <a className="text-cyan-400 hover:underline" {...props} />,
+    a: ({node, ...props}) => <a className="text-cyan-400 hover:underline" target="_blank" rel="noopener noreferrer" {...props} />,
     table: ({node, ...props}) => <table className="table-auto w-full my-4 border-collapse border border-zinc-600" {...props} />,
     thead: ({node, ...props}) => <thead className="bg-zinc-800" {...props} />,
     th: ({node, ...props}) => <th className="border border-zinc-600 px-4 py-2 text-left font-semibold" {...props} />,
@@ -63,11 +159,36 @@ const ChatMessage = ({ message }) => {
       <div className="flex flex-col flex-1 overflow-x-auto">
         <span className="font-bold text-white text-sm sm:text-base">{isUser ? 'You' : 'MillenAI'}</span>
         <div className="prose prose-sm sm:prose-base prose-invert max-w-none text-zinc-200">
-          {/* It now only renders the markdown, which is much cleaner */}
           <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
             {content}
           </ReactMarkdown>
         </div>
+        
+        {reasoning && (
+          <Disclosure as="div" className="mt-4">
+            {({ open }) => (
+              <>
+                <Disclosure.Button className="flex items-center gap-2 text-xs font-semibold text-zinc-400 hover:text-zinc-200 transition-colors">
+                  <span>{open ? 'Hide' : 'Show'} Reasoning</span>
+                  <ChevronDownIcon className={`w-4 h-4 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+                </Disclosure.Button>
+                <Transition
+                  enter="transition duration-100 ease-out"
+                  enterFrom="transform -translate-y-2 opacity-0"
+                  enterTo="transform translate-y-0 opacity-100"
+                  leave="transition duration-75 ease-out"
+                  leaveFrom="transform translate-y-0 opacity-100"
+                  leaveTo="transform -translate-y-2 opacity-0"
+                >
+                  {/* --- CHANGE: Use the new ReasoningViewer component --- */}
+                  <Disclosure.Panel className="mt-2">
+                     <ReasoningViewer reasoning={reasoning} />
+                  </Disclosure.Panel>
+                </Transition>
+              </>
+            )}
+          </Disclosure>
+        )}
       </div>
     </motion.div>
   );

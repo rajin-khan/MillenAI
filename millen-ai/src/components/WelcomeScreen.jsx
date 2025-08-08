@@ -1,3 +1,5 @@
+// /millen-ai/src/components/WelcomeScreen.jsx
+
 import { SunIcon, BoltIcon, ScaleIcon, PencilSquareIcon, Bars3Icon } from '@heroicons/react/24/outline';
 import { motion } from 'framer-motion';
 import ModelSelector from './ModelSelector';
@@ -33,7 +35,8 @@ const SuggestionCard = ({ icon, title, subtitle, onSuggestionClick }) => {
   );
 };
 
-const WelcomeScreen = ({ onSuggestionClick, models, selectedModel, setSelectedModel, onToggleSidebar, agenticMode, setAgenticMode }) => {
+// --- CHANGE 1: Update props to receive new states ---
+const WelcomeScreen = ({ onSuggestionClick, models, selectedModel, setSelectedModel, onToggleSidebar, webSearchMode, setWebSearchMode, reasoningMode, setReasoningMode }) => {
     const isGptOss = selectedModel.includes('gpt-oss');
     
     const listVariants = {
@@ -60,7 +63,14 @@ const WelcomeScreen = ({ onSuggestionClick, models, selectedModel, setSelectedMo
                             selectedModel={selectedModel} 
                             onModelChange={setSelectedModel} 
                         />
-                        {isGptOss && <AgenticControls agenticMode={agenticMode} setAgenticMode={setAgenticMode} />}
+                        {/* --- CHANGE 2: Pass new props to AgenticControls --- */}
+                        <AgenticControls 
+                            isGptOss={isGptOss}
+                            webSearchMode={webSearchMode}
+                            setWebSearchMode={setWebSearchMode}
+                            reasoningMode={reasoningMode}
+                            setReasoningMode={setReasoningMode}
+                        />
                     </div>
 
                     <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-white">

@@ -1,3 +1,5 @@
+// /millen-ai/src/components/MainContent.jsx
+
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
@@ -13,7 +15,7 @@ import AgenticControls from './AgenticControls';
 import LoadingPlaceholder from './LoadingPlaceholder';
 import { Bars3Icon, InformationCircleIcon } from '@heroicons/react/24/solid';
 
-const MainContent = ({ onToggleSidebar, activeChatId, setActiveChatId, settings, models, selectedModel, setSelectedModel, agenticMode, setAgenticMode }) => {
+const MainContent = ({ onToggleSidebar, activeChatId, setActiveChatId, settings, models, selectedModel, setSelectedModel, webSearchMode, setWebSearchMode, reasoningMode, setReasoningMode }) => {
   const { user } = useAuth();
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
@@ -71,21 +73,41 @@ const MainContent = ({ onToggleSidebar, activeChatId, setActiveChatId, settings,
       await addMessageToChat(currentChatId, userMessage);
     }
     
+    // --- CHANGE 1: Exclude 'reasoning' field from history for token optimization ---
     const apiRequestMessages = [...messages, userMessage].map(({ role, content }) => ({ role, content }));
     
     let payload = { model: selectedModel, messages: apiRequestMessages };
-    if (isGptOss) {
-      switch (agenticMode) {
-        case 'compound': payload.model = 'compound-beta'; break;
-        case 'reasoning': payload.reasoning_effort = "high"; payload.reasoning_format = "hidden"; break;
-        default: break;
+
+    if (webSearchMode) {
+      if (isGptOss) {
+        payload.tool_choice = "required";
+        payload.tools = [{ type: "browser_search" }];
+        if (!reasoningMode) {
+           payload.reasoning_effort = "low";
+        }
+      } else {
+        payload.model = 'compound-beta';
       }
     }
 
+    if (reasoningMode && isGptOss) {
+      payload.reasoning_effort = "high";
+    }
+    
     try {
       const completion = await getGroqCompletion(settings.apiKey, payload);
-      const fullResponse = completion.choices[0]?.message?.content || 'Sorry, I could not generate a response.';
-      await addMessageToChat(currentChatId, { role: 'assistant', content: fullResponse });
+      const choice = completion.choices[0]?.message;
+      
+      // --- CHANGE 2: Create a structured message with separate content and reasoning ---
+      const assistantMessage = {
+        role: 'assistant',
+        content: choice?.content || 'Sorry, I could not generate a response.',
+        // Add the reasoning field if it exists in the API response
+        ...(choice?.reasoning && { reasoning: choice.reasoning }),
+      };
+      
+      await addMessageToChat(currentChatId, assistantMessage);
+
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
       console.error(`API call failed:`, error);
@@ -105,7 +127,13 @@ const MainContent = ({ onToggleSidebar, activeChatId, setActiveChatId, settings,
                 <button onClick={onToggleSidebar} className="p-2 -ml-2 md:hidden rounded-full hover:bg-zinc-800"><Bars3Icon className="w-6 h-6 text-white" /></button>
                 <div className="flex-1 min-w-0 flex items-center justify-center md:justify-start gap-2 sm:gap-4">
                   <ModelSelector models={models} selectedModel={selectedModel} onModelChange={setSelectedModel} />
-                  {isGptOss && <AgenticControls agenticMode={agenticMode} setAgenticMode={setAgenticMode} />}
+                  <AgenticControls 
+                    isGptOss={isGptOss}
+                    webSearchMode={webSearchMode}
+                    setWebSearchMode={setWebSearchMode}
+                    reasoningMode={reasoningMode}
+                    setReasoningMode={setReasoningMode}
+                  />
                 </div>
                 <div className="hidden md:block"><ContextStatus isModal={false} currentTokens={tokenCount} maxTokens={currentModel.contextWindow} modelName={currentModel.name} /></div>
                 <button onClick={() => setIsContextModalOpen(true)} className="p-2 md:hidden rounded-full hover:bg-zinc-800"><InformationCircleIcon className="w-6 h-6 text-white" /></button>
@@ -118,17 +146,25 @@ const MainContent = ({ onToggleSidebar, activeChatId, setActiveChatId, settings,
       <div ref={chatContainerRef} className="flex-grow w-full overflow-y-auto scroll-smooth">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 h-full">
           { !isChatActive && !isLoading ? (
-            <WelcomeScreen onSuggestionClick={handleSendMessage} models={models} selectedModel={selectedModel} setSelectedModel={setSelectedModel} onToggleSidebar={onToggleSidebar} agenticMode={agenticMode} setAgenticMode={setAgenticMode} />
+             <WelcomeScreen 
+              onSuggestionClick={handleSendMessage} 
+              models={models} 
+              selectedModel={selectedModel} 
+              setSelectedModel={setSelectedModel} 
+              onToggleSidebar={onToggleSidebar} 
+              webSearchMode={webSearchMode}
+              setWebSearchMode={setWebSearchMode}
+              reasoningMode={reasoningMode}
+              setReasoningMode={setReasoningMode}
+            />
           ) : (
-            // --- THE POLISH ---
-            // Adding `layout="position"` to this div ensures it animates smoothly when the header appears,
-            // preventing the loading indicator from jumping or disappearing.
             <motion.div layout="position" className="pt-4 sm:pt-8">
               {messages.map((msg, index) => <ChatMessage key={msg.id || index} message={msg} />)}
               
               {isLoading && (
                 <div className="flex justify-center py-6">
-                  <LoadingPlaceholder type={agenticMode === 'compound' ? 'agent' : 'default'} />
+                  {/* --- CHANGE 3: Update LoadingPlaceholder type logic --- */}
+                  <LoadingPlaceholder type={webSearchMode ? 'agent' : 'default'} />
                 </div>
               )}
             </motion.div>

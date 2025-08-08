@@ -1,3 +1,5 @@
+// /millen-ai/src/lib/tokenizer.js
+
 import { get_encoding } from "tiktoken";
 
 // Initialize the tokenizer once. 'cl100k_base' is the encoding used by GPT-3.5, GPT-4, and Llama models.
@@ -15,6 +17,7 @@ export function countTokens(messages) {
     const roleTokens = encoding.encode(message.role);
     const contentTokens = encoding.encode(message.content);
     totalTokens += roleTokens.length + contentTokens.length;
+    // --- We now intentionally IGNORE the 'reasoning' field for token counting ---
   }
   return totalTokens;
 }
