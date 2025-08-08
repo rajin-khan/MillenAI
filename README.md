@@ -8,9 +8,6 @@
 
 <p align="center">
   <a href="#features">Features</a> •
-  <a href="#quick-start">Quick Start</a> •
-  <a href="#documentation">Documentation</a> •
-  <a href="#contributing">Contributing</a> •
   <a href="#roadmap">Roadmap</a>
 </p>
 
