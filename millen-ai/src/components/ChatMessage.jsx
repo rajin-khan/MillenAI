@@ -137,7 +137,7 @@ const ChatMessage = ({ message }) => {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, ease: [0.25, 1, 0.5, 1] }}
+      transition={{ duration: 0.3, ease: [0.25, 1, 0.5, 1] }}
       className={`flex gap-3 sm:gap-4 p-4 my-2 rounded-xl transition-colors duration-300 ${isUser ? '' : 'bg-[#1C1C1C]/40'}`}
     >
       <div className="w-8 h-8 flex-shrink-0 rounded-full mt-0.5">
@@ -156,19 +156,14 @@ const ChatMessage = ({ message }) => {
             <div>
               {attachments && attachments.length > 0 && (
                 <div className="not-prose flex flex-wrap gap-2 my-2">
-                  {/* --- THE FIX --- */}
-                  {/* Always render the file icon block for every attachment, including images. */}
                   {attachments.map((att, index) => (
                     <div key={index} className="flex items-center gap-2 bg-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-200 border border-zinc-700">
                       <FileIcon fileType={att.type} className="w-5 h-5 flex-shrink-0" />
                       <span className="truncate">{att.name}</span>
                     </div>
                   ))}
-                  {/* --- END OF FIX --- */}
                 </div>
               )}
-              {/* Render the user's typed text. Use a fallback for old messages without `displayText`. */}
-              {/* Using a <p> tag ensures consistent spacing even if the text is empty. */}
               <p>{displayText ?? content}</p>
             </div>
           ) : (

@@ -70,24 +70,17 @@ const MainContent = ({ onToggleSidebar, activeChatId, setActiveChatId, settings,
       
       combinedContent = `${attachmentContents}\n\n${textInput.trim()}`;
     }
-
-    // --- THE FIX: Create a structured message for better rendering ---
+    
     const userMessage = { 
       role: 'user', 
-      content: combinedContent.trim(), // This is the full content for the LLM
-      displayText: textInput.trim(),    // This is only what the user typed
-      attachments: attachments.map(att => ({ // This is the metadata for rendering file icons/previews
-        name: att.name,
-        type: att.type,
-        previewUrl: att.previewUrl || null // Keep the preview URL for images
-      }))
+      content: combinedContent.trim(),
+      displayText: textInput.trim(),
+      attachments: attachments.map(att => ({ name: att.name, type: att.type, previewUrl: att.previewUrl || null }))
     };
-    // --- END OF FIX ---
 
     let currentChatId = activeChatId;
 
     if (!currentChatId) {
-      // Temporarily set messages for instant UI feedback, but it will be replaced by the real-time listener
       setMessages([userMessage]);
       const newChatId = await createNewChat(user.uid);
       setActiveChatId(newChatId);
@@ -99,7 +92,6 @@ const MainContent = ({ onToggleSidebar, activeChatId, setActiveChatId, settings,
       await addMessageToChat(currentChatId, userMessage);
     }
     
-    // Use the latest messages from state to build the API context
     const apiRequestMessages = [...messages, userMessage].map(({ role, content }) => ({ role, content }));
     
     let payload = { model: selectedModel, messages: apiRequestMessages };
@@ -141,7 +133,6 @@ const MainContent = ({ onToggleSidebar, activeChatId, setActiveChatId, settings,
     }
   };
 
-  // ... rest of the component remains the same
   return (
     <div className="flex flex-col flex-1 h-full relative">
       <AnimatePresence>
@@ -152,13 +143,7 @@ const MainContent = ({ onToggleSidebar, activeChatId, setActiveChatId, settings,
                 <button onClick={onToggleSidebar} className="p-2 -ml-2 md:hidden rounded-full hover:bg-zinc-800"><Bars3Icon className="w-6 h-6 text-white" /></button>
                 <div className="flex-1 min-w-0 flex items-center justify-center md:justify-start gap-2 sm:gap-4">
                   <ModelSelector models={models} selectedModel={selectedModel} onModelChange={setSelectedModel} />
-                  <AgenticControls 
-                    isGptOss={isGptOss}
-                    webSearchMode={webSearchMode}
-                    setWebSearchMode={setWebSearchMode}
-                    reasoningMode={reasoningMode}
-                    setReasoningMode={setReasoningMode}
-                  />
+                  <AgenticControls isGptOss={isGptOss} webSearchMode={webSearchMode} setWebSearchMode={setWebSearchMode} reasoningMode={reasoningMode} setReasoningMode={setReasoningMode}/>
                 </div>
                 <div className="hidden md:block"><ContextStatus isModal={false} currentTokens={tokenCount} maxTokens={currentModel.contextWindow} modelName={currentModel.name} /></div>
                 <button onClick={() => setIsContextModalOpen(true)} className="p-2 md:hidden rounded-full hover:bg-zinc-800"><InformationCircleIcon className="w-6 h-6 text-white" /></button>
@@ -169,43 +154,50 @@ const MainContent = ({ onToggleSidebar, activeChatId, setActiveChatId, settings,
       </AnimatePresence>
 
       <div ref={chatContainerRef} className="flex-grow w-full overflow-y-auto scroll-smooth">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 h-full">
-          { !isChatActive && !isLoading ? (
-             <WelcomeScreen 
-              onSuggestionClick={handleSendMessage} 
-              models={models} 
-              selectedModel={selectedModel} 
-              setSelectedModel={setSelectedModel} 
-              onToggleSidebar={onToggleSidebar} 
-              webSearchMode={webSearchMode}
-              setWebSearchMode={setWebSearchMode}
-              reasoningMode={reasoningMode}
-              setReasoningMode={setReasoningMode}
-            />
+        <AnimatePresence mode="wait">
+          {!isChatActive ? (
+            <motion.div key="welcome" exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.3 }} className="h-full">
+              <WelcomeScreen 
+                user={user}
+                input={input}
+                setInput={setInput}
+                handleSendMessage={handleSendMessage}
+                onSuggestionClick={handleSendMessage} 
+                models={models} 
+                selectedModel={selectedModel} 
+                setSelectedModel={setSelectedModel} 
+                onToggleSidebar={onToggleSidebar} 
+                webSearchMode={webSearchMode}
+                setWebSearchMode={setWebSearchMode}
+                reasoningMode={reasoningMode}
+                setReasoningMode={setReasoningMode}
+                settings={settings}
+              />
+            </motion.div>
           ) : (
-            <motion.div layout="position" className="pt-4 sm:pt-8">
+            <motion.div key="chat" layout="position" className="max-w-3xl mx-auto px-4 sm:px-6 h-full pt-4 sm:pt-8">
               {messages.map((msg, index) => <ChatMessage key={msg.id || index} message={msg} />)}
-              
-              {isLoading && (
-                <div className="flex justify-center py-6">
-                  <LoadingPlaceholder type={webSearchMode ? 'agent' : 'default'} />
-                </div>
-              )}
+              {isLoading && <div className="flex justify-center py-6"><LoadingPlaceholder type={webSearchMode ? 'agent' : 'default'} /></div>}
             </motion.div>
           )}
-        </div>
+        </AnimatePresence>
       </div>
       
-      <motion.div layout transition={{ duration: 0.5, type: 'spring', bounce: 0.2 }} className="flex-shrink-0 w-full max-w-3xl px-4 pb-4 sm:px-6 sm:pb-6 mx-auto">
-        <ChatInput 
-          input={input} 
-          setInput={setInput} 
-          handleSendMessage={handleSendMessage} 
-          isLoading={isLoading} 
-          placeholder="Talk to MillenAI, or attach files..." 
-          enterToSend={settings.enterToSend} 
-        />
-      </motion.div>
+      {/* --- THE FIX: Conditionally render the ChatInput footer --- */}
+      {isChatActive && (
+        <motion.div 
+          initial={{ y: 100 }}
+          animate={{ y: 0 }}
+          transition={{ duration: 0.5, type: 'spring', bounce: 0.2 }}
+          className="flex-shrink-0 w-full max-w-3xl px-4 pb-4 sm:px-6 sm:pb-6 mx-auto"
+        >
+          <ChatInput 
+            input={input} setInput={setInput} handleSendMessage={handleSendMessage} 
+            isLoading={isLoading} placeholder="Talk to MillenAI, or attach files..." 
+            enterToSend={settings.enterToSend} 
+          />
+        </motion.div>
+      )}
 
       <ContextStatus isModal={true} isOpen={isContextModalOpen} onClose={() => setIsContextModalOpen(false)} currentTokens={tokenCount} maxTokens={currentModel.contextWindow} modelName={currentModel.name} />
     </div>
