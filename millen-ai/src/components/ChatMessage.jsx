@@ -1,26 +1,32 @@
 // /millen-ai/src/components/ChatMessage.jsx
 
-import { motion } from 'framer-motion';
-import { UserCircleIcon, ChevronDownIcon, LinkIcon } from '@heroicons/react/24/solid';
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  UserCircleIcon, 
+  ChevronDownIcon, 
+  LinkIcon, 
+  ClipboardIcon, 
+  SparklesIcon
+} from '@heroicons/react/24/solid';
 import { Disclosure, Transition } from '@headlessui/react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { dracula } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import FileIcon from './FileIcon';
+import CopyButton from './CopyButton';
+import { markdownToHtml } from '../lib/markdownUtils';
 
 const parseReasoningString = (reasoning) => {
   if (!reasoning) return [];
-  
   const regex = /(URL:[\s\S]*?)(?=URL:|$)/g;
   const parts = reasoning.split(regex).filter(part => part && part.trim() !== '');
-
   return parts.map((part, index) => {
     if (part.startsWith('URL:')) {
       const content = part.substring(4).trim();
       const searchResultsMarker = 'Search Results';
       const markerIndex = content.indexOf(searchResultsMarker);
-      
       let url, searchResults;
       if (markerIndex !== -1) {
         url = content.substring(0, markerIndex).trim().split('\n')[0];
@@ -30,19 +36,20 @@ const parseReasoningString = (reasoning) => {
         url = lines[0];
         searchResults = lines.slice(1).join('\n');
       }
-
       searchResults = searchResults.replace(/L\d+:\s?/g, '\n').replace(/†/g, ' - ').replace(/【\d+\s-\s/g, '【').trim();
-      
-      return { type: 'search', url, searchResults, id: `search-${index}` };
+      try {
+        const hostname = new URL(url).hostname;
+        return { type: 'search', url, hostname, searchResults, id: `search-${index}` };
+      } catch (e) {
+        return { type: 'search', url, hostname: url, searchResults, id: `search-${index}` };
+      }
     }
-    
     return { type: 'text', content: part, id: `text-${index}` };
   });
 };
 
 const ReasoningViewer = ({ reasoning }) => {
   const parsedSteps = parseReasoningString(reasoning);
-
   return (
     <div className="space-y-2">
       {parsedSteps.map((step, index) => {
@@ -55,23 +62,14 @@ const ReasoningViewer = ({ reasoning }) => {
                     <div className="flex items-center gap-2 overflow-hidden">
                       <LinkIcon className="w-4 h-4 text-emerald-400 flex-shrink-0" />
                       <span className="font-mono font-medium text-zinc-300 truncate">
-                        Source {index + 1}: {new URL(step.url).hostname}
+                        Source {index + 1}: {step.hostname}
                       </span>
                     </div>
                     <ChevronDownIcon className={`w-4 h-4 text-zinc-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
                   </Disclosure.Button>
-                  <Transition
-                    enter="transition duration-100 ease-out"
-                    enterFrom="transform -translate-y-2 opacity-0"
-                    enterTo="transform translate-y-0 opacity-100"
-                    leave="transition duration-75 ease-out"
-                    leaveFrom="transform translate-y-0 opacity-100"
-                    leaveTo="transform -translate-y-2 opacity-0"
-                  >
+                  <Transition enter="transition duration-100 ease-out" enterFrom="transform -translate-y-2 opacity-0" enterTo="transform translate-y-0 opacity-100" leave="transition duration-75 ease-out" leaveFrom="transform translate-y-0 opacity-100" leaveTo="transform -translate-y-2 opacity-0">
                     <Disclosure.Panel className="px-3 pb-3 text-zinc-400">
-                      <pre className="whitespace-pre-wrap font-mono text-xs bg-black/30 p-3 rounded-md overflow-x-auto">
-                        {step.searchResults}
-                      </pre>
+                      <pre className="whitespace-pre-wrap font-mono text-xs bg-black/30 p-3 rounded-md overflow-x-auto">{step.searchResults}</pre>
                     </Disclosure.Panel>
                   </Transition>
                 </div>
@@ -79,7 +77,6 @@ const ReasoningViewer = ({ reasoning }) => {
             </Disclosure>
           );
         }
-        
         return (
           <div key={step.id} className="prose prose-sm prose-invert max-w-none text-zinc-300 bg-zinc-900/50 rounded-lg border border-zinc-700/80 p-3">
              <ReactMarkdown remarkPlugins={[remarkGfm]}>{step.content}</ReactMarkdown>
@@ -94,11 +91,48 @@ const ChatMessage = ({ message }) => {
   const { role, content, reasoning, displayText, attachments } = message;
   const isUser = role === 'user';
   
+  const [copiedType, setCopiedType] = useState(null);
+  const [infoText, setInfoText] = useState('');
+
+  const handleCopy = async (e, type) => {
+    e.stopPropagation();
+
+    if (type === 'markdown') {
+      await navigator.clipboard.writeText(content);
+      setInfoText('Copied Markdown');
+    } else if (type === 'rich') {
+      const html = await markdownToHtml(content);
+      try {
+        const htmlBlob = new Blob([html], { type: 'text/html' });
+        const textBlob = new Blob([content], { type: 'text/plain' });
+        const clipboardItem = new ClipboardItem({ 'text/html': htmlBlob, 'text/plain': textBlob });
+        await navigator.clipboard.write([clipboardItem]);
+        setInfoText('Copied with Formatting');
+      } catch (err) {
+        console.error('Failed to copy rich text, falling back to markdown.', err);
+        await navigator.clipboard.writeText(content);
+        setInfoText('Copied Markdown (Fallback)');
+      }
+    }
+
+    setCopiedType(type);
+    setTimeout(() => {
+      setCopiedType(null);
+      setInfoText('');
+    }, 2000);
+  };
+
+  const handleHover = (type) => {
+    if (copiedType) return;
+    if (type === 'rich') setInfoText('Copy with Formatting');
+    if (type === 'markdown') setInfoText('Copy Markdown');
+  };
+  
   const codeBlockStyle = {
     padding: '1rem',
     margin: '0',
-    fontSize: '14px',
-    lineHeight: '1.5',
+    fontSize: '16px',
+    lineHeight: '1.6',
   };
 
   const markdownComponents = {
@@ -126,7 +160,7 @@ const ChatMessage = ({ message }) => {
           </SyntaxHighlighter>
         </div>
       ) : (
-        <code className="bg-zinc-700 text-emerald-300 font-mono rounded-md px-1.5 py-1 text-sm" {...props}>
+        <code className="bg-zinc-700 text-emerald-300 font-mono rounded-md px-1.5 py-1 text-base" {...props}>
           {children}
         </code>
       )
@@ -138,14 +172,10 @@ const ChatMessage = ({ message }) => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: [0.25, 1, 0.5, 1] }}
-      className={`flex gap-3 sm:gap-4 p-4 my-2 rounded-xl transition-colors duration-300 ${isUser ? '' : 'bg-[#1C1C1C]/40'}`}
+      className={`group relative flex gap-3 sm:gap-4 p-4 my-2 rounded-xl transition-colors duration-300 ${isUser ? '' : 'bg-[#1C1C1C]/40'}`}
     >
       <div className="w-8 h-8 flex-shrink-0 rounded-full mt-0.5">
-        {isUser ? (
-          <UserCircleIcon className="w-full h-full text-zinc-500" />
-        ) : (
-          <div className="w-full h-full rounded-full bg-gradient-to-r from-emerald-500 to-cyan-600" />
-        )}
+        {isUser ? <UserCircleIcon className="w-full h-full text-zinc-500" /> : <div className="w-full h-full rounded-full bg-gradient-to-r from-emerald-500 to-cyan-600" />}
       </div>
       
       <div className="flex flex-col flex-1 overflow-x-auto">
@@ -173,6 +203,43 @@ const ChatMessage = ({ message }) => {
           )}
         </div>
         
+        {!isUser && content && (
+          <div 
+            className="absolute top-3 right-3 flex items-center gap-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+            onMouseLeave={() => { if (!copiedType) setInfoText(''); }}
+          >
+            <AnimatePresence>
+              {infoText && (
+                <motion.div
+                  key={infoText}
+                  initial={{ opacity: 0, x: 10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 10 }}
+                  transition={{ duration: 0.2, ease: 'easeOut' }}
+                  className="text-xs text-zinc-400 font-semibold whitespace-nowrap"
+                >
+                  {infoText}
+                </motion.div>
+              )}
+            </AnimatePresence>
+            
+            <div className="flex items-center gap-1.5">
+              <CopyButton
+                onClick={(e) => handleCopy(e, 'rich')}
+                onMouseEnter={() => handleHover('rich')}
+                isCopied={copiedType === 'rich'}
+                IconComponent={SparklesIcon}
+              />
+              <CopyButton
+                onClick={(e) => handleCopy(e, 'markdown')}
+                onMouseEnter={() => handleHover('markdown')}
+                isCopied={copiedType === 'markdown'}
+                IconComponent={ClipboardIcon}
+              />
+            </div>
+          </div>
+        )}
+
         {reasoning && (
            <Disclosure as="div" className="mt-4">
             {({ open }) => (
@@ -181,14 +248,7 @@ const ChatMessage = ({ message }) => {
                   <span>{open ? 'Hide' : 'Show'} Reasoning</span>
                   <ChevronDownIcon className={`w-4 h-4 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
                 </Disclosure.Button>
-                <Transition
-                  enter="transition duration-100 ease-out"
-                  enterFrom="transform -translate-y-2 opacity-0"
-                  enterTo="transform translate-y-0 opacity-100"
-                  leave="transition duration-75 ease-out"
-                  leaveFrom="transform translate-y-0 opacity-100"
-                  leaveTo="transform -translate-y-2 opacity-0"
-                >
+                <Transition enter="transition duration-100 ease-out" enterFrom="transform -translate-y-2 opacity-0" enterTo="transform translate-y-0 opacity-100" leave="transition duration-75 ease-out" leaveFrom="transform translate-y-0 opacity-100" leaveTo="transform -translate-y-2 opacity-0">
                   <Disclosure.Panel className="mt-2">
                      <ReasoningViewer reasoning={reasoning} />
                   </Disclosure.Panel>
