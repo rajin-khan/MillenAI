@@ -7,7 +7,8 @@ import SettingsModal from './components/SettingsModal';
 import OnboardingModal from './components/OnboardingModal';
 import AnimatedBackground from './components/AnimatedBackground';
 import { useAuth } from './context/AuthContext';
-import { usePrevious } from './hooks/usePrevious'; // --- CHANGE 1: Import the new hook ---
+import { usePrevious } from './hooks/usePrevious';
+import BetaModal from './components/BetaModal'; // --- CHANGE: Import the new modal ---
 
 const models = [
   { id: 3, name: 'openai/gpt-oss-120b', contextWindow: 131072 },
@@ -29,8 +30,8 @@ const App = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
+  const [isBetaModalOpen, setIsBetaModalOpen] = useState(false); // --- CHANGE: State for Beta modal ---
 
-  // --- CHANGE 2: Track the previous value of activeChatId ---
   const prevActiveChatId = usePrevious(activeChatId);
 
   useEffect(() => {
@@ -40,9 +41,16 @@ const App = () => {
     }
   }, []);
 
+  // --- CHANGE: Onboarding completion now triggers the Beta modal ---
   const handleOnboardingComplete = () => {
-    localStorage.setItem('millenai_has_visited', 'true');
     setIsOnboardingOpen(false);
+    setIsBetaModalOpen(true); // Show Beta modal right after
+  };
+
+  // --- CHANGE: Closing the Beta modal completes the first-visit flow ---
+  const handleBetaModalClose = () => {
+    localStorage.setItem('millenai_has_visited', 'true');
+    setIsBetaModalOpen(false);
   };
 
   useEffect(() => {
@@ -53,18 +61,12 @@ const App = () => {
     if (!user) setActiveChatId(null);
   }, [user]);
 
-  // --- CHANGE 3: The Fix - Refine the reset logic ---
   useEffect(() => {
-    // This effect now resets the toggles ONLY IF:
-    // 1. The model is changed.
-    // 2. We are switching from one EXISTING chat to another (prev was not null).
-    // This prevents the reset when going from the welcome screen (null) to the first chat.
     if (prevActiveChatId !== null) {
       setWebSearchMode(false);
       setReasoningMode(false);
     }
-  }, [selectedModel, activeChatId, prevActiveChatId]); // Add prevActiveChatId to dependencies
-
+  }, [selectedModel, activeChatId, prevActiveChatId]);
 
   const handleSaveSettings = (newSettings) => setSettings(newSettings);
 
@@ -77,6 +79,8 @@ const App = () => {
       <AnimatedBackground />
       
       <OnboardingModal isOpen={isOnboardingOpen} onClose={handleOnboardingComplete} />
+      {/* --- CHANGE: Render the Beta modal and pass its close handler --- */}
+      <BetaModal isOpen={isBetaModalOpen} onClose={handleBetaModalClose} />
       
       <Sidebar 
         isOpen={isSidebarOpen}
@@ -84,6 +88,8 @@ const App = () => {
         activeChatId={activeChatId} 
         setActiveChatId={setActiveChatId}
         onOpenSettings={() => setIsSettingsOpen(true)}
+        // --- CHANGE: Pass a function to open the Beta modal from the sidebar ---
+        onOpenBetaModal={() => setIsBetaModalOpen(true)}
       />
       <MainContent 
         onToggleSidebar={() => setIsSidebarOpen(true)}

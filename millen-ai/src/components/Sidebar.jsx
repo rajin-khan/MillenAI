@@ -10,7 +10,8 @@ import ChatHistoryItem from './ChatHistoryItem';
 import ConfirmationModal from './ConfirmationModal';
 import { motion } from 'framer-motion';
 
-const Sidebar = ({ isOpen, onClose, activeChatId, setActiveChatId, onOpenSettings }) => {
+// --- CHANGE: Added `onOpenBetaModal` to props ---
+const Sidebar = ({ isOpen, onClose, activeChatId, setActiveChatId, onOpenSettings, onOpenBetaModal }) => {
   const { user } = useAuth();
   const [chats, setChats] = useState([]);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -76,10 +77,15 @@ const Sidebar = ({ isOpen, onClose, activeChatId, setActiveChatId, onOpenSetting
   };
   
   const sidebarContent = (
-    // --- CHANGE: Updated background, border, and layout styles ---
     <div className="flex flex-col w-72 p-4 bg-[#1C1C1C]/60 backdrop-blur-xl border-r border-zinc-700/50 h-full">
-      <div className="flex-shrink-0 mb-6 text-left">
-        <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-400">MillenAI</h1>
+      {/* --- CHANGE: Wrapped logo in a flex container and added BETA badge --- */}
+      <div className="flex items-center justify-between flex-shrink-0 mb-6 text-left">
+        <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-400">MillenAI</h1>
+            <button onClick={onOpenBetaModal} className="text-xs font-bold text-cyan-400 bg-cyan-900/50 border border-cyan-700/50 rounded-full px-2 py-0.5 hover:bg-cyan-800/50 transition-colors">
+                BETA
+            </button>
+        </div>
       </div>
 
       <button onClick={handleNewChat} className="flex items-center justify-center w-full gap-2 px-4 py-2.5 mb-6 text-sm font-semibold text-white transition-all duration-300 ease-in-out rounded-lg bg-emerald-600 hover:bg-emerald-500 hover:scale-105 active:scale-100 disabled:opacity-50" disabled={!user}>
