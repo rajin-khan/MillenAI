@@ -10,7 +10,6 @@ import ChatHistoryItem from './ChatHistoryItem';
 import ConfirmationModal from './ConfirmationModal';
 import { motion } from 'framer-motion';
 
-// --- CHANGE: Added `onOpenBetaModal` to props ---
 const Sidebar = ({ isOpen, onClose, activeChatId, setActiveChatId, onOpenSettings, onOpenBetaModal }) => {
   const { user } = useAuth();
   const [chats, setChats] = useState([]);
@@ -77,8 +76,8 @@ const Sidebar = ({ isOpen, onClose, activeChatId, setActiveChatId, onOpenSetting
   };
   
   const sidebarContent = (
+    // --- CHANGE: Added `mt-auto` to the footer container to push it to the bottom ---
     <div className="flex flex-col w-72 p-4 bg-[#1C1C1C]/60 backdrop-blur-xl border-r border-zinc-700/50 h-full">
-      {/* --- CHANGE: Wrapped logo in a flex container and added BETA badge --- */}
       <div className="flex items-center justify-between flex-shrink-0 mb-6 text-left">
         <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-400">MillenAI</h1>
@@ -109,21 +108,37 @@ const Sidebar = ({ isOpen, onClose, activeChatId, setActiveChatId, onOpenSetting
         </motion.div>
       </div>
 
-      <div className="flex-shrink-0 pt-4 mt-2 border-t border-zinc-700/50">
-        {user ? (
-          <div className="group flex items-center w-full gap-3 p-2 text-zinc-200">
-            <UserAvatar user={user} />
-            <div className="flex-1 overflow-hidden">
-              <p className="font-semibold text-sm truncate">{user.displayName}</p>
-              <p className="text-xs text-zinc-400 truncate">{user.email}</p>
+      {/* --- CHANGE: Combined footer elements into a single container pushed to the bottom --- */}
+      <div className="flex-shrink-0 mt-auto">
+        <div className="pt-4 border-t border-zinc-700/50">
+          {user ? (
+            <div className="group flex items-center w-full gap-3 p-2 text-zinc-200">
+              <UserAvatar user={user} />
+              <div className="flex-1 overflow-hidden">
+                <p className="font-semibold text-sm truncate">{user.displayName}</p>
+                <p className="text-xs text-zinc-400 truncate">{user.email}</p>
+              </div>
+              <button onClick={onOpenSettings} className="p-2 rounded-full hover:bg-zinc-700 transition-colors" title="Settings"><Cog6ToothIcon className="w-6 h-6 text-zinc-400" /></button>
+              <button onClick={logOut} className="p-2 rounded-full hover:bg-zinc-700 transition-colors" title="Sign Out"><ArrowRightOnRectangleIcon className="w-6 h-6 text-zinc-400" /></button>
             </div>
-            <button onClick={onOpenSettings} className="p-2 rounded-full hover:bg-zinc-700 transition-colors" title="Settings"><Cog6ToothIcon className="w-6 h-6 text-zinc-400" /></button>
-            <button onClick={logOut} className="p-2 rounded-full hover:bg-zinc-700 transition-colors" title="Sign Out"><ArrowRightOnRectangleIcon className="w-6 h-6 text-zinc-400" /></button>
-          </div>
-        ) : (
-          <button onClick={signInWithGoogle} className="w-full p-3 font-semibold text-center text-white bg-emerald-600 rounded-lg hover:bg-emerald-500">Sign In with Google</button>
-        )}
+          ) : (
+            <button onClick={signInWithGoogle} className="w-full p-3 font-semibold text-center text-white bg-emerald-600 rounded-lg hover:bg-emerald-500">Sign In with Google</button>
+          )}
+        </div>
+
+        <div className="pt-3 text-center">
+            <a 
+                href="https://rajinkhan.com" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="group text-xs text-zinc-600 font-medium tracking-wide hover:text-zinc-500 transition-colors duration-300"
+            >
+                Developed by <span className="group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r from-emerald-400 to-cyan-400 transition-colors duration-300">Rajin Khan</span>
+            </a>
+        </div>
       </div>
+      {/* --- END OF CHANGE --- */}
+
     </div>
   );
 
