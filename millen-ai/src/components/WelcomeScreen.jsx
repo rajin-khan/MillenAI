@@ -199,7 +199,7 @@ const WelcomeScreen = ({
               setInput={setInput} 
               handleSendMessage={handleAsk} 
               isLoading={isProcessing}
-              placeholder={mode === 'chat' ? "How can I help you today?" : "Present your challenge to the Council..."}
+              placeholder={mode === 'chat' ? "How can I help you today?" : "Ask your Biggest Question to the Council..."}
               enterToSend={settings.enterToSend} 
             />
           </div>
