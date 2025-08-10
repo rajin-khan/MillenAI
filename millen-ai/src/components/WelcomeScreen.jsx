@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Bars3Icon, PencilSquareIcon, AcademicCapIcon, CodeBracketIcon, 
-  SparklesIcon, HeartIcon, XMarkIcon, ArrowUpIcon 
+  SparklesIcon, HeartIcon, XMarkIcon, ArrowUpIcon, QuestionMarkCircleIcon 
 } from '@heroicons/react/24/outline';
 import ModelSelector from './ModelSelector';
 import AgenticControls from './AgenticControls';
@@ -12,6 +12,7 @@ import ChatInput from './ChatInput';
 import { signInWithGoogle } from '../lib/firebase';
 import ModeSwitcher from './council/ModeSwitcher';
 import { useCouncilSession } from '../hooks/useCouncilSession.jsx';
+import CouncilInfoModal from './council/CouncilInfoModal'; // Import the new modal
 
 const greetings = {
   morning: ["Good morning, {{name}}.", "Rise and shine, {{name}}!", "What's on the agenda today, {{name}}?", "Ready to build the future, {{name}}?"],
@@ -119,10 +120,23 @@ const WelcomeScreen = ({
   setMode 
 }) => {
   const [activeCategory, setActiveCategory] = useState(null);
+  const [isCouncilInfoOpen, setIsCouncilInfoOpen] = useState(false); // State for the new modal
   const isGptOss = selectedModel.includes('gpt-oss');
   const [welcomeCharacters] = useState(() => getWelcomeMessage(user));
   const { askCouncil, isProcessing } = useCouncilSession();
 
+  // New handler to show the modal on the first visit to the council tab
+  const handleModeChange = (newMode) => {
+    setMode(newMode);
+    if (newMode === 'council') {
+      const hasSeenCouncilInfo = localStorage.getItem('millenai_council_info_seen');
+      if (!hasSeenCouncilInfo) {
+        setIsCouncilInfoOpen(true);
+        localStorage.setItem('millenai_council_info_seen', 'true');
+      }
+    }
+  };
+  
   const handleAsk = () => {
     if (mode === 'chat') {
       handleChatSendMessage(input);
@@ -151,6 +165,7 @@ const WelcomeScreen = ({
 
   return (
     <div className="flex flex-col w-full h-full text-center">
+      <CouncilInfoModal isOpen={isCouncilInfoOpen} onClose={() => setIsCouncilInfoOpen(false)} />
       <div className="flex md:hidden items-center pt-2 pb-4 flex-shrink-0">
         <button onClick={onToggleSidebar} className="p-2 -ml-2 rounded-full hover:bg-zinc-800">
           <Bars3Icon className="w-6 h-6 text-white" />
@@ -176,9 +191,9 @@ const WelcomeScreen = ({
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.5, delay: 1.2, ease: 'easeOut' }}
-            className="mb-8 flex justify-center items-center flex-wrap gap-4"
+            className="mb-4 flex justify-center items-center flex-wrap gap-4"
           >
-            <ModeSwitcher mode={mode} setMode={setMode} disabled={isProcessing} />
+            <ModeSwitcher mode={mode} setMode={handleModeChange} disabled={isProcessing} />
             <AnimatePresence>
             {mode === 'chat' && (
               <motion.div 
@@ -193,6 +208,25 @@ const WelcomeScreen = ({
             )}
             </AnimatePresence>
           </motion.div>
+          {/* Manual trigger for the council info modal */}
+          <AnimatePresence>
+            {mode === 'council' && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0, transition: { delay: 0.2 } }}
+                exit={{ opacity: 0, y: 10 }}
+                className="flex justify-center mb-6"
+              >
+                <button
+                  onClick={() => setIsCouncilInfoOpen(true)}
+                  className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-cyan-400 transition-colors"
+                >
+                  <QuestionMarkCircleIcon className="w-4 h-4" />
+                  What is the AI Council?
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
           <div className="px-4 sm:px-0">
              <ChatInput 
               input={input} 
