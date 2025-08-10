@@ -1,5 +1,6 @@
 // /millen-ai/src/stores/councilStore.js
 import { create } from 'zustand';
+import { toast } from 'sonner';
 
 export const useCouncilStore = create(
   (set, get) => ({
@@ -13,19 +14,19 @@ export const useCouncilStore = create(
     synthesisResult: '',
     
     // UI State
-    showIndividualResponses: false,
+    showIndividualResponses: true, // <-- CHANGE 1: Set the default to true
     
     // Actions
     startCouncilSession: async (prompt, apiKey) => {
       set({ 
         isCouncilActive: true, 
         sessionPhase: 'selecting', 
-        phaseMessage: 'Convening the Council...',
+        phaseMessage: 'The Council is Discussing...',
         currentSession: { id: Date.now(), prompt }, 
         synthesisResult: '', 
         memberStatuses: {},
         activeMembers: [],
-        showIndividualResponses: false,
+        showIndividualResponses: true, // <-- CHANGE 2: Ensure it's true for new sessions
       });
 
       try {
@@ -71,7 +72,7 @@ export const useCouncilStore = create(
           case 'synthesis_complete':
             return {
               sessionPhase: 'complete',
-              phaseMessage: 'Council decree delivered.',
+              phaseMessage: 'The Council has Delivered Its Results.',
               synthesisResult: data.synthesis,
             };
           case 'error':

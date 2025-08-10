@@ -11,8 +11,8 @@ import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { dracula } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
+const codeBlockStyle = { padding: '1rem', margin: '0', fontSize: '14px', lineHeight: '1.6' };
 
-// THIS IS THE FIX: The `markdownComponents` object needs to be defined here for the ReportSection component.
 const markdownComponents = {
     h1: ({node, ...props}) => <h1 className="text-3xl font-bold mt-6 mb-4" {...props} />,
     h2: ({node, ...props}) => <h2 className="text-2xl font-bold mt-6 mb-3 border-b border-zinc-700 pb-2" {...props} />,
@@ -20,7 +20,7 @@ const markdownComponents = {
     ul: ({node, ...props}) => <ul className="list-disc pl-6 my-2" {...props} />,
     ol: ({node, ...props}) => <ol className="list-decimal pl-6 my-2" {...props} />,
     li: ({node, ...props}) => <li className="mb-1" {...props} />,
-    blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-emerald-500 pl-4 my-4 italic text-zinc-400" {...props} />,
+    blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-emerald-500/50 pl-4 my-4 italic text-zinc-400" {...props} />,
     a: ({node, ...props}) => <a className="text-cyan-400 hover:underline" target="_blank" rel="noopener noreferrer" {...props} />,
     table: ({node, ...props}) => <div className="overflow-x-auto my-4"><table className="table-auto w-full border-collapse border border-zinc-600" {...props} /></div>,
     thead: ({node, ...props}) => <thead className="bg-zinc-800" {...props} />,
@@ -30,7 +30,7 @@ const markdownComponents = {
       const match = /language-(\w+)/.exec(className || '');
       return !inline && match ? (
         <div className="my-2 rounded-lg overflow-hidden border border-zinc-700/50">
-          <SyntaxHighlighter style={dracula} customStyle={{padding: '1rem', margin: '0'}} language={match[1]} PreTag="div" {...props}>
+          <SyntaxHighlighter style={dracula} customStyle={codeBlockStyle} language={match[1]} PreTag="div" {...props}>
             {String(children).replace(/\n$/, '')}
           </SyntaxHighlighter>
         </div>
@@ -43,15 +43,15 @@ const markdownComponents = {
     hr: () => <hr className="my-6 border-zinc-700/50" />
 };
 
-const ReportSection = ({ icon: Icon, title, children }) => (
-  <motion.div layout variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}>
-    <div className="flex items-center gap-3 mb-3">
+const ReportSection = ({ icon: Icon, title, children, color = "text-emerald-400" }) => (
+  <motion.div layout variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6">
+    <div className="flex items-center gap-3 mb-4">
       <div className="w-8 h-8 flex-shrink-0 flex items-center justify-center bg-zinc-800 rounded-lg border border-zinc-700">
-        <Icon className="w-5 h-5 text-zinc-300" />
+        <Icon className={`w-5 h-5 ${color}`} />
       </div>
       <h3 className="text-xl font-bold text-white">{title}</h3>
     </div>
-    <div className="prose prose-sm sm:prose-base prose-invert max-w-none pl-11 text-zinc-300">
+    <div className="prose prose-sm sm:prose-base prose-invert max-w-none text-zinc-300">
        <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>{children}</ReactMarkdown>
     </div>
   </motion.div>
@@ -68,6 +68,16 @@ const CouncilInterface = () => {
   
   if (sessionPhase === 'idle') return null;
 
+  const parseSynthesis = (text) => {
+    const finalVerdictMatch = text.match(/##\s*⚖️\s*Final Verdict\s*([\s\S]*?)(?=##\s*🏛️\s*The Council's Reasoning|$)/i);
+    const councilReasoningMatch = text.match(/##\s*🏛️\s*The Council's Reasoning\s*([\s\S]*?)(?=---|\n## \[|$)/i);
+    
+    return {
+      finalVerdict: finalVerdictMatch ? finalVerdictMatch[1].trim() : '',
+      councilReasoning: councilReasoningMatch ? councilReasoningMatch[1].trim() : '',
+    };
+  };
+
   const parseIndividualAnalyses = (text) => {
     const roles = ["The Researcher", "The Analyst", "The Philosopher"];
     const analyses = [];
@@ -80,11 +90,10 @@ const CouncilInterface = () => {
     });
     return analyses;
   };
-  const individualAnalyses = parseIndividualAnalyses(synthesisResult);
-
-  const sectionIcons = { "The Researcher": BeakerIcon, "The Analyst": LightBulbIcon, "The Philosopher": ChatBubbleBottomCenterTextIcon };
   
-  // THIS IS THE FIX: The variable was defined inside the component scope, not globally.
+  const { finalVerdict, councilReasoning } = parseSynthesis(synthesisResult);
+  const individualAnalyses = parseIndividualAnalyses(synthesisResult);
+  const sectionIcons = { "The Researcher": BeakerIcon, "The Analyst": LightBulbIcon, "The Philosopher": ChatBubbleBottomCenterTextIcon };
   const containerVariants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.1, delayChildren: 0.2 } } };
   
   return (
@@ -126,11 +135,24 @@ const CouncilInterface = () => {
                   onExport={() => alert('Exporting...')}
                   individualAnalyses={individualAnalyses}
                 />
+                
+                <div className="space-y-6">
+                  {finalVerdict && <ReportSection icon={ScaleIcon} title="Final Verdict" color="text-pink-400">{finalVerdict}</ReportSection>}
+                  {councilReasoning && <ReportSection icon={LightBulbIcon} title="The Council's Reasoning">{councilReasoning}</ReportSection>}
+                  {!finalVerdict && !councilReasoning && <ReportSection icon={ExclamationCircleIcon} title="Full Synthesis" color="text-yellow-400">{synthesisResult}</ReportSection>}
+                </div>
+                
                 <AnimatePresence>
                   {showIndividualResponses && (
-                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.4, ease: "easeInOut" }} className="space-y-4 pt-6 border-t border-zinc-700/50">
+                    <motion.div 
+                      variants={containerVariants}
+                      initial="hidden" 
+                      animate="visible"
+                      exit="hidden"
+                      className="space-y-6 pt-6 border-t border-zinc-700/50"
+                    >
                       {individualAnalyses.map(({ role, content }) => (
-                         <ReportSection key={role} icon={sectionIcons[role] || BeakerIcon} title={`${role}'s Full Analysis`}>
+                         <ReportSection key={role} icon={sectionIcons[role]} title={`${role}'s Full Analysis`}>
                             {content}
                          </ReportSection>
                       ))}
