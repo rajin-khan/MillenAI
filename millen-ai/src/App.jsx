@@ -8,7 +8,9 @@ import OnboardingModal from './components/OnboardingModal';
 import AnimatedBackground from './components/AnimatedBackground';
 import { useAuth } from './context/AuthContext';
 import { usePrevious } from './hooks/usePrevious';
-import BetaModal from './components/BetaModal'; // --- CHANGE: Import the new modal ---
+import BetaModal from './components/BetaModal';
+import { useCouncilStore } from './stores/councilStore';
+import { Toaster } from 'sonner'; // Import the Toaster component
 
 const models = [
   { id: 3, name: 'openai/gpt-oss-120b', contextWindow: 131072 },
@@ -30,24 +32,22 @@ const App = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
-  const [isBetaModalOpen, setIsBetaModalOpen] = useState(false); // --- CHANGE: State for Beta modal ---
+  const [isBetaModalOpen, setIsBetaModalOpen] = useState(false);
+  const [mode, setMode] = useState('chat'); // 'chat' or 'council'
 
+  const isCouncilActive = useCouncilStore(state => state.isCouncilActive);
   const prevActiveChatId = usePrevious(activeChatId);
 
   useEffect(() => {
     const hasVisited = localStorage.getItem('millenai_has_visited');
-    if (!hasVisited) {
-      setIsOnboardingOpen(true);
-    }
+    if (!hasVisited) setIsOnboardingOpen(true);
   }, []);
 
-  // --- CHANGE: Onboarding completion now triggers the Beta modal ---
   const handleOnboardingComplete = () => {
     setIsOnboardingOpen(false);
-    setIsBetaModalOpen(true); // Show Beta modal right after
+    setIsBetaModalOpen(true);
   };
 
-  // --- CHANGE: Closing the Beta modal completes the first-visit flow ---
   const handleBetaModalClose = () => {
     localStorage.setItem('millenai_has_visited', 'true');
     setIsBetaModalOpen(false);
@@ -77,9 +77,10 @@ const App = () => {
   return (
     <main className="relative flex w-full h-dvh font-sans bg-transparent overflow-hidden">
       <AnimatedBackground />
+      {/* ADD THE TOASTER COMPONENT HERE */}
+      <Toaster theme="dark" position="bottom-right" richColors />
       
       <OnboardingModal isOpen={isOnboardingOpen} onClose={handleOnboardingComplete} />
-      {/* --- CHANGE: Render the Beta modal and pass its close handler --- */}
       <BetaModal isOpen={isBetaModalOpen} onClose={handleBetaModalClose} />
       
       <Sidebar 
@@ -88,7 +89,6 @@ const App = () => {
         activeChatId={activeChatId} 
         setActiveChatId={setActiveChatId}
         onOpenSettings={() => setIsSettingsOpen(true)}
-        // --- CHANGE: Pass a function to open the Beta modal from the sidebar ---
         onOpenBetaModal={() => setIsBetaModalOpen(true)}
       />
       <MainContent 
@@ -103,6 +103,8 @@ const App = () => {
         setWebSearchMode={setWebSearchMode}
         reasoningMode={reasoningMode}
         setReasoningMode={setReasoningMode}
+        mode={mode}
+        setMode={setMode}
       />
       <SettingsModal
         isOpen={isSettingsOpen}

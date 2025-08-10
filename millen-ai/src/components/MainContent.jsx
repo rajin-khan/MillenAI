@@ -15,15 +15,34 @@ import AgenticControls from './AgenticControls';
 import LoadingPlaceholder from './LoadingPlaceholder';
 import { Bars3Icon, InformationCircleIcon } from '@heroicons/react/24/solid';
 
-const MainContent = ({ onToggleSidebar, activeChatId, setActiveChatId, settings, models, selectedModel, setSelectedModel, webSearchMode, setWebSearchMode, reasoningMode, setReasoningMode }) => {
+// Council-related imports
+import { useCouncilSession } from '../hooks/useCouncilSession.jsx';
+import CouncilInterface from './council/CouncilInterface';
+
+const MainContent = ({ 
+  onToggleSidebar, 
+  activeChatId, 
+  setActiveChatId, 
+  settings, 
+  models, 
+  selectedModel, 
+  setSelectedModel, 
+  webSearchMode, 
+  setWebSearchMode, 
+  reasoningMode, 
+  setReasoningMode,
+  mode,
+  setMode 
+}) => {
   const { user } = useAuth();
   const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState(''); // This state is still needed for WelcomeScreen
   const [isLoading, setIsLoading] = useState(false);
   const [tokenCount, setTokenCount] = useState(0);
   const chatContainerRef = useRef(null);
   const [isContextModalOpen, setIsContextModalOpen] = useState(false);
 
+  const { isCouncilActive } = useCouncilSession();
   const currentModel = models.find(m => m.name === selectedModel) || models[0];
   const isGptOss = selectedModel.includes('gpt-oss');
   const isChatActive = activeChatId !== null;
@@ -49,7 +68,6 @@ const MainContent = ({ onToggleSidebar, activeChatId, setActiveChatId, settings,
 
   const handleSendMessage = async (messageContent, attachments = []) => {
     const textInput = typeof messageContent === 'string' ? messageContent : input;
-
     if (!user || (!textInput.trim() && attachments.length === 0) || isLoading) return;
     if (!settings.apiKey) {
       alert("Please set your Groq API key in the settings first.");
@@ -58,90 +76,57 @@ const MainContent = ({ onToggleSidebar, activeChatId, setActiveChatId, settings,
 
     setIsLoading(true);
     setInput('');
-
     let combinedContent = textInput.trim();
-
     if (attachments.length > 0) {
-      const attachmentContents = attachments.map(file => {
-        const header = `--- START OF ATTACHED FILE: ${file.name} (Type: ${file.type}) ---`;
-        const footer = `--- END OF FILE: ${file.name} ---`;
-        return `${header}\n\n${file.content}\n\n${footer}`;
-      }).join('\n\n');
-      
+      const attachmentContents = attachments.map(file => `--- START OF ATTACHED FILE: ${file.name} (Type: ${file.type}) ---\n\n${file.content}\n\n--- END OF FILE: ${file.name} ---`).join('\n\n');
       combinedContent = `${attachmentContents}\n\n${textInput.trim()}`;
     }
-    
     const userMessage = { 
       role: 'user', 
       content: combinedContent.trim(),
       displayText: textInput.trim(),
       attachments: attachments.map(att => ({ name: att.name, type: att.type, previewUrl: att.previewUrl || null }))
     };
-
     let currentChatId = activeChatId;
-    const previousMessages = [...messages]; // Capture current messages for API call
-
+    const previousMessages = [...messages];
     if (!currentChatId) {
-      // --- THE FIX: PART 1 ---
-      // Optimistically update the UI *before* any network requests.
-      // This makes the transition from WelcomeScreen to ChatView feel instant.
       setMessages([userMessage]);
-      
-      // The only thing we MUST wait for is the new chat ID.
       const newChatId = await createNewChat(user.uid);
-      
-      // Now that we have the ID, update the state to finalize the UI transition.
       setActiveChatId(newChatId);
       currentChatId = newChatId;
-
-      // These database operations can now run in the background without blocking the UI.
       const newTitle = textInput.trim().split(' ').slice(0, 4).join(' ') || attachments[0]?.name || 'New Chat';
-      updateChatTitle(currentChatId, newTitle); // No await
-      addMessageToChat(currentChatId, userMessage); // No await
-      
+      updateChatTitle(currentChatId, newTitle);
+      addMessageToChat(currentChatId, userMessage);
     } else {
-      // --- THE FIX: PART 2 ---
-      // For existing chats, we can also remove the await.
-      // The Firestore listener (`onSnapshot`) will handle updating the UI from the database truth.
-      addMessageToChat(currentChatId, userMessage); // No await
+      addMessageToChat(currentChatId, userMessage);
     }
-    
-    // Use the captured `previousMessages` so the API call has the correct context.
     const apiRequestMessages = [...previousMessages, userMessage].map(({ role, content }) => ({ role, content }));
-    
     let payload = { model: selectedModel, messages: apiRequestMessages };
-
     if (webSearchMode) {
       if (isGptOss) {
         payload.tool_choice = "required";
         payload.tools = [{ type: "browser_search" }];
-        if (!reasoningMode) {
-           payload.reasoning_effort = "low";
-        }
+        if (!reasoningMode) payload.reasoning_effort = "low";
       } else {
         payload.model = 'compound-beta';
       }
     }
-
     if (reasoningMode && isGptOss) {
       payload.reasoning_effort = "high";
     }
-
     try {
       const completion = await getGroqCompletion(settings.apiKey, payload);
       const choice = completion.choices[0]?.message;
-      
       const assistantMessage = {
         role: 'assistant',
         content: choice?.content || 'Sorry, I could not generate a response.',
         ...(choice?.reasoning && { reasoning: choice.reasoning }),
       };
-      
-      addMessageToChat(currentChatId, assistantMessage); // No await here either
+      addMessageToChat(currentChatId, assistantMessage);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
       console.error(`API call failed:`, error);
-      addMessageToChat(currentChatId, { role: 'assistant', content: `An error occurred: ${errorMessage}` }); // No await
+      addMessageToChat(currentChatId, { role: 'assistant', content: `An error occurred: ${errorMessage}` });
     } finally {
       setIsLoading(false);
     }
@@ -150,7 +135,7 @@ const MainContent = ({ onToggleSidebar, activeChatId, setActiveChatId, settings,
   return (
     <div className="flex flex-col flex-1 h-full relative">
       <AnimatePresence>
-        {isChatActive && (
+        {isChatActive && !isCouncilActive && (
           <motion.header key="chat-header" initial={{ y: -80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -80, opacity: 0 }} transition={{ duration: 0.3, ease: 'easeInOut' }} className="flex-shrink-0 z-10 bg-[#0D1117]/80 backdrop-blur-lg border-b border-white/10">
             <div className="max-w-4xl mx-auto px-2 sm:px-4">
               <div className="flex items-center justify-between gap-2 h-16">
@@ -167,14 +152,20 @@ const MainContent = ({ onToggleSidebar, activeChatId, setActiveChatId, settings,
         )}
       </AnimatePresence>
 
-      <div ref={chatContainerRef} className="flex-grow w-full overflow-y-auto scroll-smooth">
+      <div ref={chatContainerRef} className="flex-grow w-full overflow-y-auto scroll-smooth min-h-0">
         <AnimatePresence mode="wait">
-          {!isChatActive ? (
+          {isCouncilActive ? (
+            <motion.div key="council" className="h-full">
+              <CouncilInterface />
+            </motion.div>
+          ) : !isChatActive ? (
             <motion.div key="welcome" exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.3 }} className="h-full">
               <WelcomeScreen 
                 user={user}
+                // THIS IS THE FIX: Restoring the input and setInput props
                 input={input}
                 setInput={setInput}
+                // --- End of Fix ---
                 handleSendMessage={handleSendMessage}
                 onSuggestionClick={handleSendMessage} 
                 models={models} 
@@ -186,6 +177,8 @@ const MainContent = ({ onToggleSidebar, activeChatId, setActiveChatId, settings,
                 reasoningMode={reasoningMode}
                 setReasoningMode={setReasoningMode}
                 settings={settings}
+                mode={mode}
+                setMode={setMode}
               />
             </motion.div>
           ) : (
@@ -197,7 +190,7 @@ const MainContent = ({ onToggleSidebar, activeChatId, setActiveChatId, settings,
         </AnimatePresence>
       </div>
       
-      {isChatActive && (
+      {isChatActive && !isCouncilActive && (
         <motion.div 
           initial={{ y: 100 }}
           animate={{ y: 0 }}

@@ -10,6 +10,8 @@ import ModelSelector from './ModelSelector';
 import AgenticControls from './AgenticControls';
 import ChatInput from './ChatInput';
 import { signInWithGoogle } from '../lib/firebase';
+import ModeSwitcher from './council/ModeSwitcher';
+import { useCouncilSession } from '../hooks/useCouncilSession.jsx';
 
 const greetings = {
   morning: ["Good morning, {{name}}.", "Rise and shine, {{name}}!", "What's on the agenda today, {{name}}?", "Ready to build the future, {{name}}?"],
@@ -98,42 +100,54 @@ const suggestionCategories = [
   },
 ];
 
-const WelcomeScreen = ({ user, input, setInput, handleSendMessage, onSuggestionClick, models, selectedModel, setSelectedModel, onToggleSidebar, webSearchMode, setWebSearchMode, reasoningMode, setReasoningMode, settings }) => {
+const WelcomeScreen = ({ 
+  user, 
+  input, 
+  setInput, 
+  handleSendMessage: handleChatSendMessage, 
+  onSuggestionClick, 
+  models, 
+  selectedModel, 
+  setSelectedModel, 
+  onToggleSidebar, 
+  webSearchMode, 
+  setWebSearchMode, 
+  reasoningMode, 
+  setReasoningMode, 
+  settings, 
+  mode, 
+  setMode 
+}) => {
   const [activeCategory, setActiveCategory] = useState(null);
   const isGptOss = selectedModel.includes('gpt-oss');
-  
-  // --- THE FIX: Use useState with an initializer function to generate the message only once ---
   const [welcomeCharacters] = useState(() => getWelcomeMessage(user));
+  const { askCouncil, isProcessing } = useCouncilSession();
+
+  const handleAsk = () => {
+    if (mode === 'chat') {
+      handleChatSendMessage(input);
+    } else {
+      if (user) {
+        askCouncil(input);
+        setInput('');
+      } else {
+        signInWithGoogle();
+      }
+    }
+  };
 
   const handlePromptClick = (promptAction) => {
     if (user) {
-      onSuggestionClick(promptAction);
+      handleChatSendMessage(promptAction);
     } else {
       signInWithGoogle();
     }
   };
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: { opacity: 1, transition: { staggerChildren: 0.08, delayChildren: 0.2 } },
-    exit: { opacity: 0, transition: { staggerChildren: 0.05, staggerDirection: -1 } },
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 100 } },
-    exit: { opacity: 0, y: -20, transition: { duration: 0.15 } },
-  };
-  
-  const welcomeContainerVariants = {
-    hidden: { opacity: 0 },
-    visible: { opacity: 1, transition: { staggerChildren: 0.02, delayChildren: 0.2 } }
-  };
-  
-  const welcomeCharVariants = {
-    hidden: { opacity: 0, y: 10, filter: 'blur(3px)' },
-    visible: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { type: 'spring', damping: 15, stiffness: 400 } }
-  };
+  const containerVariants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.08, delayChildren: 0.2 } }, exit: { opacity: 0, transition: { staggerChildren: 0.05, staggerDirection: -1 } } };
+  const itemVariants = { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 100 } }, exit: { opacity: 0, y: -20, transition: { duration: 0.15 } } };
+  const welcomeContainerVariants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.02, delayChildren: 0.2 } } };
+  const welcomeCharVariants = { hidden: { opacity: 0, y: 10, filter: 'blur(3px)' }, visible: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { type: 'spring', damping: 15, stiffness: 400 } } };
 
   return (
     <div className="flex flex-col w-full h-full text-center">
@@ -142,10 +156,8 @@ const WelcomeScreen = ({ user, input, setInput, handleSendMessage, onSuggestionC
           <Bars3Icon className="w-6 h-6 text-white" />
         </button>
       </div>
-
       <div className="flex-grow flex flex-col items-center justify-center">
         <div className="w-full max-w-3xl">
-          
           <div className="mb-12">
             <motion.h1 
               variants={welcomeContainerVariants}
@@ -160,88 +172,99 @@ const WelcomeScreen = ({ user, input, setInput, handleSendMessage, onSuggestionC
               ))}
             </motion.h1>
           </div>
-          
           <motion.div 
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.5, delay: 1.2, ease: 'easeOut' }}
-            className="mb-8 flex justify-center items-center gap-4"
+            className="mb-8 flex justify-center items-center flex-wrap gap-4"
           >
-            <ModelSelector models={models} selectedModel={selectedModel} onModelChange={setSelectedModel} />
-            <AgenticControls isGptOss={isGptOss} webSearchMode={webSearchMode} setWebSearchMode={setWebSearchMode} reasoningMode={reasoningMode} setReasoningMode={setReasoningMode} />
+            <ModeSwitcher mode={mode} setMode={setMode} disabled={isProcessing} />
+            <AnimatePresence>
+            {mode === 'chat' && (
+              <motion.div 
+                initial={{opacity: 0, width: 0, scale: 0.8}} 
+                animate={{opacity: 1, width: 'auto', scale: 1, transition: { delay: 0.1 }}} 
+                exit={{opacity: 0, width: 0, scale: 0.8}} 
+                className="flex items-center gap-4"
+              >
+                <ModelSelector models={models} selectedModel={selectedModel} onModelChange={setSelectedModel} />
+                <AgenticControls isGptOss={isGptOss} webSearchMode={webSearchMode} setWebSearchMode={setWebSearchMode} reasoningMode={reasoningMode} setReasoningMode={setReasoningMode} />
+              </motion.div>
+            )}
+            </AnimatePresence>
           </motion.div>
-
           <div className="px-4 sm:px-0">
              <ChatInput 
               input={input} 
               setInput={setInput} 
-              handleSendMessage={handleSendMessage} 
-              isLoading={false}
-              placeholder="How can I help you today?"
-              enterToSend={settings.enterToSend} 
+              handleSendMessage={handleAsk} 
+              isLoading={isProcessing}
+              placeholder={mode === 'chat' ? "How can I help you today?" : "Present your challenge to the Council..."}
+              enterToSend={settings.enterToSend && mode === 'chat'} 
             />
           </div>
-
-          <div className="w-full min-h-[160px] sm:min-h-[72px] mt-8">
-            <AnimatePresence mode="wait">
-              {!activeCategory ? (
-                <motion.div
-                  key="categories"
-                  variants={containerVariants}
-                  initial="hidden" animate="visible" exit="exit"
-                  className="flex flex-wrap items-center justify-center gap-4"
-                >
-                  {suggestionCategories.map((cat) => (
-                    <motion.button
-                      key={cat.name} variants={itemVariants} whileHover={{ scale: 1.05, y: -3 }} whileTap={{ scale: 0.95 }}
-                      transition={{ type: 'spring', stiffness: 300, damping: 15 }}
-                      onClick={() => setActiveCategory(cat)}
-                      className="group flex items-center gap-2.5 px-5 py-3 bg-zinc-800/60 text-zinc-200 text-base font-medium rounded-xl border border-zinc-700/60 transition-colors hover:bg-zinc-700/80 hover:border-zinc-600"
-                    >
-                      <cat.icon className="w-5 h-5 transition-colors group-hover:text-emerald-400" />
-                      {cat.name}
-                    </motion.button>
-                  ))}
-                </motion.div>
-              ) : (
-                <motion.div
-                  key={activeCategory.name} variants={containerVariants}
-                  initial="hidden" animate="visible" exit="exit"
-                  className="p-1 bg-gradient-to-br from-emerald-500/20 via-transparent to-cyan-500/20 rounded-2xl"
-                >
-                  <div className="relative bg-[#1C1C1C] rounded-[15px] p-5">
-                    <motion.div variants={itemVariants} className="flex justify-between items-center mb-4">
-                      <div className="flex items-center gap-3 text-lg font-bold text-white">
-                        <activeCategory.icon className="w-6 h-6 text-emerald-400" />
-                        {activeCategory.name}
-                      </div>
+          {mode === 'chat' && (
+            <div className="w-full min-h-[160px] sm:min-h-[72px] mt-8">
+              <AnimatePresence mode="wait">
+                {!activeCategory ? (
+                  <motion.div
+                    key="categories"
+                    variants={containerVariants}
+                    initial="hidden" animate="visible" exit="exit"
+                    className="flex flex-wrap items-center justify-center gap-4"
+                  >
+                    {suggestionCategories.map((cat) => (
                       <motion.button
-                        whileHover={{ scale: 1.1, rotate: 90, backgroundColor: '#3f3f46' }}
-                        whileTap={{ scale: 0.9 }}
-                        onClick={() => setActiveCategory(null)}
-                        className="p-1.5 rounded-full"
+                        key={cat.name} variants={itemVariants} whileHover={{ scale: 1.05, y: -3 }} whileTap={{ scale: 0.95 }}
+                        transition={{ type: 'spring', stiffness: 300, damping: 15 }}
+                        onClick={() => setActiveCategory(cat)}
+                        className="group flex items-center gap-2.5 px-5 py-3 bg-zinc-800/60 text-zinc-200 text-base font-medium rounded-xl border border-zinc-700/60 transition-colors hover:bg-zinc-700/80 hover:border-zinc-600"
                       >
-                        <XMarkIcon className="w-5 h-5 text-zinc-400" />
+                        <cat.icon className="w-5 h-5 transition-colors group-hover:text-emerald-400" />
+                        {cat.name}
                       </motion.button>
-                    </motion.div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {activeCategory.prompts.map((prompt) => (
+                    ))}
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key={activeCategory.name} variants={containerVariants}
+                    initial="hidden" animate="visible" exit="exit"
+                    className="p-1 bg-gradient-to-br from-emerald-500/20 via-transparent to-cyan-500/20 rounded-2xl"
+                  >
+                    <div className="relative bg-[#1C1C1C] rounded-[15px] p-5">
+                      <motion.div variants={itemVariants} className="flex justify-between items-center mb-4">
+                        <div className="flex items-center gap-3 text-lg font-bold text-white">
+                          <activeCategory.icon className="w-6 h-6 text-emerald-400" />
+                          {activeCategory.name}
+                        </div>
                         <motion.button
-                          key={prompt.short}
-                          variants={itemVariants}
-                          onClick={() => handlePromptClick(prompt.long)}
-                          className="group w-full text-left flex justify-between items-center p-3 text-zinc-300 rounded-lg border border-transparent hover:border-emerald-500/50 hover:bg-zinc-800/50 transition-all"
+                          whileHover={{ scale: 1.1, rotate: 90, backgroundColor: '#3f3f46' }}
+                          whileTap={{ scale: 0.9 }}
+                          onClick={() => setActiveCategory(null)}
+                          className="p-1.5 rounded-full"
                         >
-                          <span className="text-sm">{prompt.short}</span>
-                          <ArrowUpIcon className="w-4 h-4 text-zinc-500 opacity-0 group-hover:opacity-100 transition-opacity -rotate-45" />
+                          <XMarkIcon className="w-5 h-5 text-zinc-400" />
                         </motion.button>
-                      ))}
+                      </motion.div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {activeCategory.prompts.map((prompt) => (
+                          <motion.button
+                            key={prompt.short}
+                            variants={itemVariants}
+                            onClick={() => handlePromptClick(prompt.long)}
+                            className="group w-full text-left flex justify-between items-center p-3 text-zinc-300 rounded-lg border border-transparent hover:border-emerald-500/50 hover:bg-zinc-800/50 transition-all"
+                          >
+                            <span className="text-sm">{prompt.short}</span>
+                            <ArrowUpIcon className="w-4 h-4 text-zinc-500 opacity-0 group-hover:opacity-100 transition-opacity -rotate-45" />
+                          </motion.button>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
         </div>
       </div>
     </div>
