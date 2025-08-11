@@ -78,7 +78,7 @@ const CouncilInfoModal = ({ isOpen, onClose }) => {
                       </motion.div>
 
                       <motion.p variants={itemVariants} className="mt-3 text-sm text-zinc-300 max-w-xl mx-auto">
-                        The AI Council is not just another chatbot. It's an assembly of specialized AI agents working in concert to provide a comprehensive, multi-perspective answer to your most complex questions.
+                        The AI Council is not just another chatbot. It's an assembly of specialized AI agents working in cohesion to provide a comprehensive, multi-perspective answer to your most complex questions.
                       </motion.p>
                       
                       <motion.div variants={itemVariants} className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
