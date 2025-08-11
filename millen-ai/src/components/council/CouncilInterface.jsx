@@ -1,4 +1,5 @@
 // /millen-ai/src/components/council/CouncilInterface.jsx
+// FIXED: Correctly calculates and passes the progress value to the new CouncilProgress component.
 
 import { useCouncilSession } from '../../hooks/useCouncilSession.jsx';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -63,15 +64,16 @@ const CouncilInterface = () => {
     resetCouncil, showIndividualResponses, toggleIndividualResponses
   } = useCouncilSession();
   
-  const progressMap = { 'selecting': 10, 'analyzing': 30, 'researching': 50, 'collaborating': 75, 'synthesizing': 90, 'complete': 100, 'error': 100 };
+  // --- FIX START: Correctly map the current overall sessionPhase to a progress value ---
+  const progressMap = { 'selecting': 10, 'researching': 35, 'analyzing': 60, 'pondering': 75, 'judging': 90, 'complete': 100, 'error': 100 };
   const progress = progressMap[sessionPhase] || 0;
+  // --- FIX END ---
   
   if (sessionPhase === 'idle') return null;
 
   const parseSynthesis = (text) => {
     const finalVerdictMatch = text.match(/##\s*⚖️\s*Final Verdict\s*([\s\S]*?)(?=##\s*🏛️\s*The Council's Reasoning|$)/i);
     const councilReasoningMatch = text.match(/##\s*🏛️\s*The Council's Reasoning\s*([\s\S]*?)(?=---|\n## \[|$)/i);
-    
     return {
       finalVerdict: finalVerdictMatch ? finalVerdictMatch[1].trim() : '',
       councilReasoning: councilReasoningMatch ? councilReasoningMatch[1].trim() : '',
@@ -96,8 +98,15 @@ const CouncilInterface = () => {
   const sectionIcons = { "The Researcher": BeakerIcon, "The Analyst": LightBulbIcon, "The Philosopher": ChatBubbleBottomCenterTextIcon };
   const containerVariants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.1, delayChildren: 0.2 } } };
   
+  const cardPositions = [
+    { top: '0%', left: '50%', transform: 'translate(-50%, -50%)' },   // Top
+    { top: '50%', left: '100%', transform: 'translate(-50%, -50%)' }, // Right
+    { top: '100%', left: '50%', transform: 'translate(-50%, -50%)' }, // Bottom
+    { top: '50%', left: '0%', transform: 'translate(-50%, -50%)' },   // Left
+  ];
+
   return (
-    <div className="w-full h-full flex flex-col items-center p-4 sm:p-6 text-white">
+    <div className="w-full h-full flex flex-col items-center p-4 sm:p-6 text-white overflow-hidden">
       <div className="w-full max-w-5xl flex flex-col flex-grow h-full min-h-0">
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
@@ -106,11 +115,6 @@ const CouncilInterface = () => {
         >
           <div className="text-left">
             <h2 className="text-3xl sm:text-4xl font-bold">🏛️ AI Council is in Session</h2>
-            <AnimatePresence mode="wait">
-              <motion.p key={phaseMessage} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="text-zinc-400 mt-1">
-                {phaseMessage}
-              </motion.p>
-            </AnimatePresence>
           </div>
           <motion.button whileHover={{ scale: 1.1, rotate: 90 }} whileTap={{ scale: 0.9 }} onClick={resetCouncil} className="p-2 bg-zinc-800/50 rounded-full">
             <XMarkIcon className="w-6 h-6 text-zinc-400" />
@@ -120,35 +124,51 @@ const CouncilInterface = () => {
         <div className="flex-grow overflow-y-auto pr-2 -mr-2 scroll-smooth">
           <AnimatePresence mode="wait">
             {sessionPhase !== 'complete' && sessionPhase !== 'error' ? (
-              <motion.div key="processing" exit={{ opacity: 0 }} className="flex flex-col items-center justify-center h-full">
-                <motion.div variants={containerVariants} initial="hidden" animate="visible" className="w-full grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                  {activeMembers.map(member => <CouncilMemberCard key={member.id} member={member} status={memberStatuses[member.id]} />)}
-                </motion.div>
-                <CouncilProgress progress={progress} />
+              <motion.div 
+                key="processing" 
+                exit={{ opacity: 0, scale: 0.9 }} 
+                className="flex flex-col items-center justify-center h-full"
+              >
+                <div className="relative w-[32rem] h-[32rem] scale-75 sm:scale-100">
+                  <div 
+                    className="absolute inset-0 opacity-10" 
+                    style={{ backgroundImage: 'radial-gradient(circle at 50% 50%, #14B8A6 0%, transparent 70%)' }} 
+                  />
+                  <motion.div variants={containerVariants} initial="hidden" animate="visible" className="relative w-full h-full">
+                    {activeMembers.map((member, index) => (
+                      <motion.div
+                        key={member.id}
+                        className="absolute w-40"
+                        style={cardPositions[index]}
+                        variants={containerVariants}
+                      >
+                         <CouncilMemberCard member={member} status={memberStatuses[member.id]} />
+                      </motion.div>
+                    ))}
+                  </motion.div>
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+                    <CouncilProgress progress={progress} phaseMessage={phaseMessage} />
+                  </div>
+                </div>
               </motion.div>
             ) : (
               <motion.div key="synthesis" className="space-y-6">
-                <CouncilSynthesis
+                 <CouncilSynthesis
                   synthesis={synthesisResult}
                   onToggleIndividual={toggleIndividualResponses}
                   showIndividual={showIndividualResponses}
                   onExport={() => alert('Exporting...')}
                   individualAnalyses={individualAnalyses}
                 />
-                
                 <div className="space-y-6">
                   {finalVerdict && <ReportSection icon={ScaleIcon} title="Final Verdict" color="text-pink-400">{finalVerdict}</ReportSection>}
                   {councilReasoning && <ReportSection icon={LightBulbIcon} title="The Council's Reasoning">{councilReasoning}</ReportSection>}
                   {!finalVerdict && !councilReasoning && <ReportSection icon={ExclamationCircleIcon} title="Full Synthesis" color="text-yellow-400">{synthesisResult}</ReportSection>}
                 </div>
-                
                 <AnimatePresence>
                   {showIndividualResponses && (
                     <motion.div 
-                      variants={containerVariants}
-                      initial="hidden" 
-                      animate="visible"
-                      exit="hidden"
+                      variants={containerVariants} initial="hidden" animate="visible" exit="hidden"
                       className="space-y-6 pt-6 border-t border-zinc-700/50"
                     >
                       {individualAnalyses.map(({ role, content }) => (
@@ -162,7 +182,6 @@ const CouncilInterface = () => {
               </motion.div>
             )}
           </AnimatePresence>
-
           {sessionPhase === 'error' && (
             <motion.div initial={{opacity: 0}} animate={{opacity: 1}} className="text-center p-8 bg-red-900/30 border border-red-500/50 rounded-lg">
                 <h3 className="text-lg font-bold text-red-400">A Council error occurred.</h3>
