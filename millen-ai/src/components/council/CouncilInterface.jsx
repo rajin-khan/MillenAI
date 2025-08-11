@@ -1,5 +1,4 @@
 // /millen-ai/src/components/council/CouncilInterface.jsx
-// FIXED: Correctly calculates and passes the progress value to the new CouncilProgress component.
 
 import { useCouncilSession } from '../../hooks/useCouncilSession.jsx';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -64,10 +63,23 @@ const CouncilInterface = () => {
     resetCouncil, showIndividualResponses, toggleIndividualResponses
   } = useCouncilSession();
   
-  // --- FIX START: Correctly map the current overall sessionPhase to a progress value ---
-  const progressMap = { 'selecting': 10, 'researching': 35, 'analyzing': 60, 'pondering': 75, 'judging': 90, 'complete': 100, 'error': 100 };
-  const progress = progressMap[sessionPhase] || 0;
-  // --- FIX END ---
+  let effectivePhase = sessionPhase;
+  const activeStatus = Object.values(memberStatuses).find(s => ['researching', 'analyzing', 'pondering', 'judging'].includes(s.status));
+  if (activeStatus) {
+    effectivePhase = activeStatus.status;
+  }
+  
+  const progressMap = { 
+    'selecting': 10, 
+    'researching': 35, 
+    'analyzing': 60, 
+    'pondering': 75, 
+    'judging': 90, 
+    'synthesizing': 95, 
+    'complete': 100, 
+    'error': 100 
+  };
+  const progress = progressMap[effectivePhase] || 0;
   
   if (sessionPhase === 'idle') return null;
 
@@ -99,10 +111,10 @@ const CouncilInterface = () => {
   const containerVariants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.1, delayChildren: 0.2 } } };
   
   const cardPositions = [
-    { top: '0%', left: '50%', transform: 'translate(-50%, -50%)' },   // Top
-    { top: '50%', left: '100%', transform: 'translate(-50%, -50%)' }, // Right
-    { top: '100%', left: '50%', transform: 'translate(-50%, -50%)' }, // Bottom
-    { top: '50%', left: '0%', transform: 'translate(-50%, -50%)' },   // Left
+    { top: '0%', left: '50%', transform: 'translate(-50%, -50%)' },
+    { top: '50%', left: '100%', transform: 'translate(-50%, -50%)' },
+    { top: '100%', left: '50%', transform: 'translate(-50%, -50%)' },
+    { top: '50%', left: '0%', transform: 'translate(-50%, -50%)' },
   ];
 
   return (
@@ -134,18 +146,18 @@ const CouncilInterface = () => {
                     className="absolute inset-0 opacity-10" 
                     style={{ backgroundImage: 'radial-gradient(circle at 50% 50%, #14B8A6 0%, transparent 70%)' }} 
                   />
-                  <motion.div variants={containerVariants} initial="hidden" animate="visible" className="relative w-full h-full">
+                  <div className="relative w-full h-full">
                     {activeMembers.map((member, index) => (
-                      <motion.div
+                      // THIS IS THE FIX: This is now a simple div. The card handles its own animation.
+                      <div
                         key={member.id}
                         className="absolute w-40"
                         style={cardPositions[index]}
-                        variants={containerVariants}
                       >
                          <CouncilMemberCard member={member} status={memberStatuses[member.id]} />
-                      </motion.div>
+                      </div>
                     ))}
-                  </motion.div>
+                  </div>
                   <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
                     <CouncilProgress progress={progress} phaseMessage={phaseMessage} />
                   </div>

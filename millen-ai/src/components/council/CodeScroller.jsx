@@ -1,5 +1,4 @@
 // /millen-ai/src/components/council/CodeScroller.jsx
-// ENHANCED: Now accepts a tintColor prop to match the parent card's theme.
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -19,8 +18,7 @@ const maskStyle = {
   WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%)',
 };
 
-
-const CodeScroller = ({ isActive, tintColor = '#34D399' }) => { // Default to emerald green
+const CodeScroller = ({ isActive, tintColor = '#34D399' }) => {
   const [lines, setLines] = useState([]);
 
   useEffect(() => {

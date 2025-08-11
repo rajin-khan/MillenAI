@@ -1,5 +1,4 @@
 // /millen-ai/src/components/council/CouncilMemberCard.jsx
-// ENHANCED: Passes the member's theme color to the CodeScroller for a cohesive look.
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -16,11 +15,6 @@ const statusPhrases = {
 const CouncilMemberCard = ({ member, status }) => {
   const [phraseIndex, setPhraseIndex] = useState(0);
 
-  const cardVariants = {
-    hidden: { opacity: 0, scale: 0.8 },
-    visible: { opacity: 1, scale: 1 },
-  };
-  
   const statusMap = {
     pending: { icon: ClockIcon, text: 'Awaiting Task', color: 'text-zinc-500' },
     researching: { text: 'Researching', color: 'text-cyan-400' },
@@ -56,14 +50,19 @@ const CouncilMemberCard = ({ member, status }) => {
   return (
     <motion.div
       layout
-      variants={cardVariants}
-      transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+      // THIS IS THE FIX: The floating animation is now the ONLY one here.
+      animate={isActive ? { y: [0, -6, 0] } : { y: 0 }}
+      transition={{
+        duration: 4,
+        ease: "easeInOut",
+        repeat: Infinity,
+        repeatType: "mirror"
+      }}
       className="relative flex flex-col items-center justify-between text-center p-4 rounded-2xl border bg-zinc-900/70 backdrop-blur-sm h-40 w-full"
       style={{ borderColor: member.color }}
     >
       <div className="absolute inset-0 opacity-20" style={glowStyle} />
       
-      {/* --- THE CHANGE IS HERE: Pass the member's color as a tint --- */}
       <CodeScroller isActive={isActive} tintColor={member.color} />
 
       <AnimatePresence>
@@ -73,11 +72,15 @@ const CouncilMemberCard = ({ member, status }) => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-[-1px] rounded-2xl"
-            style={{
-              boxShadow: `0 0 8px 1px ${member.color}, 0 0 16px 1px ${member.color} inset`,
-            }}
-          />
+            className="absolute inset-[-1px] rounded-2xl pointer-events-none"
+          >
+            <motion.div 
+              className="w-full h-full rounded-2xl"
+              style={{ boxShadow: `0 0 8px 1px ${member.color}, 0 0 16px 1px ${member.color} inset` }}
+              animate={{ opacity: [0.5, 1, 0.5] }}
+              transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+            />
+          </motion.div>
         )}
       </AnimatePresence>
 

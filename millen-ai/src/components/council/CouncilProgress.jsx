@@ -1,5 +1,4 @@
 // /millen-ai/src/components/council/CouncilProgress.jsx
-// Drastically improved, multi-layered, visually appealing progress ring.
 
 import { motion, AnimatePresence } from 'framer-motion';
 
