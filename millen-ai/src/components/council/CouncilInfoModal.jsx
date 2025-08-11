@@ -59,7 +59,7 @@ const CouncilInfoModal = ({ isOpen, onClose }) => {
                     >
                        <video
                         className="w-full h-full" // No object-fit class needed, it will fit by default
-                        src="/onboarding/councildemo.mp4" 
+                        src="/onboarding/council.mp4" 
                         autoPlay loop muted playsInline
                       />
                     </motion.div>
