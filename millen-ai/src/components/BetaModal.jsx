@@ -48,7 +48,7 @@ const BetaModal = ({ isOpen, onClose }) => {
 
                     <Dialog.Description className="mt-4 space-y-3 text-sm text-zinc-400">
                       <p>
-                        Thank you for being an early user of MillenAI. This application is in <strong>active development</strong>, and is is <strong>not</strong> yet optimized for mobile..
+                        Thank you for being an early user of MillenAI. This application is in <strong>active development</strong>, and is is <strong>not</strong> yet optimized for mobile.
                       </p>
                       <p>
                         You might encounter some bugs or performance hiccups along the way. Your feedback is crucial for making MillenAI better.
