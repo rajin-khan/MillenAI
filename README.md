@@ -46,6 +46,14 @@ The landscape of Large Language Models is rapidly expanding, but interacting wit
 
 ## The Solution
 
+
+
+https://github.com/user-attachments/assets/269ba787-432d-48be-9c82-8a2d660a2dc0
+
+
+
+---
+
 </div>
 
 <div align="center">
@@ -93,8 +101,18 @@ From the guided onboarding to the real-time token counter and rich Markdown supp
 
 ### Core Capabilities
 
+https://github.com/user-attachments/assets/c7c8754e-2582-42ef-a12a-3a93c5c5562d
+
 -   🏛️ **AI Council Mode** — A multi-agent system that uses a Researcher, Analyst, Philosopher, and Judge to provide deep, multi-perspective answers.
 -   📎 **File & Document Processing** — Client-side text extraction from images (OCR), PDFs, DOCX, Excel/CSV, and plain text files.
+
+
+
+https://github.com/user-attachments/assets/f2517d2f-41bd-4c5a-b2f5-75ba0b255cff
+
+
+
+-   
 -   🌐 **Universal Web Search** — Enable real-time internet access for any model with a simple toggle to get up-to-date information.
 -   🚀 **Multi-Model Support** — Seamlessly switch between Llama 3.1, Llama 3.3, and GPT-OSS models.
 -   🔒 **Secure Authentication** — Google Sign-In with Firebase for safe and persistent conversation management.
