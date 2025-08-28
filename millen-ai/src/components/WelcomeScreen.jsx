@@ -14,6 +14,22 @@ import ModeSwitcher from './council/ModeSwitcher';
 import { useCouncilSession } from '../hooks/useCouncilSession.jsx';
 import CouncilInfoModal from './council/CouncilInfoModal'; // Import the new modal
 
+// NEW: Easily customize your welcome screen footer message here.
+const footerMessage = (
+  <>
+    Web Search for the GPT-OSS models are unstable.{' '}
+    <a
+      href="https://groq.com/"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="font-semibold text-zinc-400 hover:text-orange-400 transition-colors"
+    >
+      Groq Cloud 
+    </a>
+    {' '} issue, not ours. Try out other models for Web Search.
+  </>
+);
+
 const greetings = {
   morning: ["Good morning, {{name}}.", "Rise and shine, {{name}}!", "What's on the agenda today, {{name}}?", "Ready to build the future, {{name}}?"],
   afternoon: ["Good afternoon, {{name}}.", "Hope you're having a productive day, {{name}}.", "How can I help this afternoon, {{name}}?", "Let's bring your ideas to life, {{name}}."],
@@ -299,6 +315,20 @@ const WelcomeScreen = ({
               </AnimatePresence>
             </div>
           )}
+
+          {/* NEW: Added the footer message with animation below the suggestions area */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 1.5, ease: 'easeOut' }}
+            className="mt-8 text-center"
+          >
+            <p className="text-xs text-zinc-500">
+              {footerMessage}
+            </p>
+          </motion.div>
+          {/* END OF NEW CODE */}
+          
         </div>
       </div>
     </div>
